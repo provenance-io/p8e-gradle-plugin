@@ -27,7 +27,7 @@ p8eJar - Builds jars for projects specified by "contractProject" and "protoProje
 
 ## Minimal Example
 
-This example is runnable from [here](https://github.com/provenance-io/p8e-gradle-plugin/blob/main/example/build.gradle).
+This example is runnable from [here](https://github.com/provenance-io/p8e-gradle-plugin/blob/main/example).
 
 ```groovy
 // This block specifies the configuration needed to connect to a p8e instance as well as the audience list
