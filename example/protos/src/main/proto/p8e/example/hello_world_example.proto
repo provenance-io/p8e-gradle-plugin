@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package p8e;
+
+option java_package = "io.p8e.proto.example";
+option java_outer_classname = "HelloWorldExample";
+
+message ExampleName {
+    string first_name = 1;
+    string last_name = 2;
+    string middle_name = 3;
+    string prefix = 4;
+    string suffix = 5;
+}
