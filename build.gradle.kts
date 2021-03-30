@@ -18,14 +18,12 @@ plugins {
 repositories {
     mavenLocal()
     mavenCentral()
-    repositories {
-        maven {
-            name = "GitHubPackages"
-            url = "https://maven.pkg.github.com/provenance-io/p8e"
-            credentials {
-                username = System.getenv("GITHUB_ACTOR")
-                password = System.getenv("GITHUB_TOKEN")
-            }
+    maven {
+        name = "GitHubPackages"
+        url = uri("https://maven.pkg.github.com/provenance-io/p8e")
+        credentials {
+            username = System.getenv("GITHUB_ACTOR")
+            password = System.getenv("GITHUB_TOKEN")
         }
     }
 }
