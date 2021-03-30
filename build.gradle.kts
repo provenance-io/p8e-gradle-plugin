@@ -18,6 +18,8 @@ plugins {
 repositories {
     mavenLocal()
     mavenCentral()
+    maven { url = uri("https://javadoc.jitpack.io") }
+    maven { url = uri("https://plugins.gradle.org/m2/") }
     maven {
         name = "GitHubPackages"
         url = uri("https://maven.pkg.github.com/provenance-io/p8e")
