@@ -54,6 +54,9 @@ jobs:
 
       - name: Build with Gradle
         run: ./gradlew clean build jacocoTestReport --refresh-dependencies -Pversion=$VERSION
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to Gradle Plugin Repository
         run: ./gradlew publishPlugins -Pversion=$VERSION -Pgradle.publish.key=$PUBLISH_KEY -Pgradle.publish.secret=$PUBLISH_SECRET

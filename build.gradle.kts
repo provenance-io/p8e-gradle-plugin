@@ -18,18 +18,14 @@ plugins {
 repositories {
     mavenLocal()
     mavenCentral()
-    maven {
-        url = uri("https://nexus.figure.com/repository/mirror")
-        credentials {
-            username = (project.properties["nexusUser"] ?: System.getenv("NEXUS_USER")) as String
-            password = (project.properties["nexusPass"] ?: System.getenv("NEXUS_PASS")) as String
-        }
-    }
-    maven {
-        url = uri("https://nexus.figure.com/repository/figure")
-        credentials {
-            username = (project.properties["nexusUser"] ?: System.getenv("NEXUS_USER")) as String
-            password = (project.properties["nexusPass"] ?: System.getenv("NEXUS_PASS")) as String
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = "https://maven.pkg.github.com/provenance-io/p8e"
+            credentials {
+                username = System.getenv("GITHUB_ACTOR")
+                password = System.getenv("GITHUB_TOKEN")
+            }
         }
     }
 }
