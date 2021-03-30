@@ -59,7 +59,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run Integration Tests with Gradle
-        run: ./gradlew integrationTest -Pversion=$VERSION
+        run: ./gradlew integrationTest --stacktrace -Pversion=$VERSION
         env:
           API_URL: ${{ secrets.INTEGRATION_TEST_API_URL }}
           PRIVATE_KEY: ${{ secrets.INTEGRATION_TEST_PRIVATE_KEY }}
