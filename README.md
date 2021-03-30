@@ -4,7 +4,23 @@ P8e gradle plugin allows for publishing P8e Contracts against a [P8e](https://gi
 
 ## Status
 
-TODO status badges
+[![Latest Release][release-badge]][release-latest]
+[![Code Coverage][code-coverage-badge]][code-coverage-report]
+[![License][license-badge]][license-url]
+[![LOC][loc-badge]][loc-report]
+
+[code-coverage-badge]: https://codecov.io/gh/provenance-io/p8e-gradle-plugin/branch/main/graph/badge.svg
+[code-coverage-report]: https://app.codecov.io/gh/provenance-io/p8e-gradle-plugin
+
+[release-badge]: https://img.shields.io/github/v/tag/provenance-io/p8e-gradle-plugin.svg?sort=semver
+[release-latest]: https://github.com/provenance-io/p8e-gradle-plugin/releases/latest
+
+[license-badge]: https://img.shields.io/github/license/provenance-io/p8e-gradle-plugin.svg
+[license-url]: https://github.com/provenance-io/p8e-gradle-plugin/blob/main/LICENSE
+
+[loc-badge]: https://tokei.rs/b1/github/provenance-io/p8e-gradle-plugin
+[loc-report]: https://github.com/provenance-io/p8e-gradle-plugin
+
 
 WARNING: Versions prior to `1.0.0` should be considered unstable and API changes expected.
 
