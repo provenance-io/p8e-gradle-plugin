@@ -7,10 +7,12 @@ version = (project.property("version") as String?)?.takeUnless { it.isBlank() } 
 // version = '1.0-SNAPSHOT'
 
 plugins {
-    kotlin("jvm") version "1.4.32"
-    `java-gradle-plugin`
-    `maven-publish`
     id("com.bmuschko.nexus") version "2.3.1"
+    id("com.gradle.plugin-publish") version "0.13.0"
+    `jacoco`
+    `java-gradle-plugin`
+    kotlin("jvm") version "1.4.32"
+    `maven-publish`
 }
 
 repositories {
@@ -62,17 +64,6 @@ dependencies {
     "integrationTestImplementation"("io.kotest:kotest-runner-junit5:4.4.+")
 }
 
-gradlePlugin {
-    testSourceSets(integrationTest)
-
-    plugins {
-        create("p8ePlugin") {
-            id = "io.provenance.p8e.p8e-publish"
-            implementationClass = "io.provenance.p8e.plugin.ContractPlugin"
-        }
-    }
-}
-
 tasks.withType<KotlinCompile> {
     kotlinOptions.jvmTarget = "1.8"
 }
@@ -107,14 +98,32 @@ tasks.register<Test>("integrationTest") {
     tasks.withType<Test>()
 }
 
-publishing {
-    repositories {
-        maven {
-            url = uri("https://${System.getenv("NEXUS_HOST")}/repository/figure")
-            credentials {
-                username = (project.properties["nexusUser"] ?: System.getenv("NEXUS_USER")) as String
-                password = (project.properties["nexusPass"] ?: System.getenv("NEXUS_PASS")) as String
-            }
+jacoco {
+    toolVersion = "0.8.6"
+}
+
+tasks.jacocoTestReport {
+    reports {
+        xml.isEnabled = true
+        csv.isEnabled = false
+    }
+}
+
+pluginBundle {
+    website = "https://github.com/provenance-io/p8e-gradle-plugin"
+    vcsUrl = "https://github.com/provenance-io/p8e-gradle-plugin.git"
+    tags = listOf("provenance", "provenance.io", "p8e", "bootstrap", "publish")
+}
+
+gradlePlugin {
+    testSourceSets(integrationTest)
+
+    plugins {
+        create("p8ePlugin") {
+            id = "io.provenance.p8e.p8e-publish"
+            displayName = "p8e gradle plugin"
+            description = "Publishes P8eContract classes to Provenance P8e execution environments"
+            implementationClass = "io.provenance.p8e.plugin.ContractPlugin"
         }
     }
 }
