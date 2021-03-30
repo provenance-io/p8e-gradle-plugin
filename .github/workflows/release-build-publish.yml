@@ -11,23 +11,6 @@ on:
       - main
 
 jobs:
-  # Run tests.
-  # See also https://docs.docker.com/docker-hub/builds/automated-testing/
-#   test:
-#     runs-on: ubuntu-latest
-
-#     steps:
-#       - uses: actions/checkout@v2
-
-#       - name: Run tests
-#         run: |
-#           if [ -f docker-compose.test.yml ]; then
-#             docker-compose --file docker-compose.test.yml build
-#             docker-compose --file docker-compose.test.yml run sut
-#           else
-#             docker build . --file Dockerfile
-#           fi
-
   java_build:
     name: Build and Publish Jar
 
@@ -58,12 +41,12 @@ jobs:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run Integration Tests with Gradle
-        run: ./gradlew integrationTest -Pversion=$VERSION
-        env:
-          API_URL: ${{ secrets.INTEGRATION_TEST_API_URL }}
-          PRIVATE_KEY: ${{ secrets.INTEGRATION_TEST_PRIVATE_KEY }}
-        if: github.event_name == 'release'
+          # - name: Run Integration Tests with Gradle
+          #   run: ./gradlew integrationTest -Pversion=$VERSION
+          #   env:
+          #     API_URL: ${{ secrets.INTEGRATION_TEST_API_URL }}
+          #     PRIVATE_KEY: ${{ secrets.INTEGRATION_TEST_PRIVATE_KEY }}
+          #   if: github.event_name == 'release'
 
       - name: Publish to Gradle Plugin Repository
         run: ./gradlew publishPlugins -Pversion=$VERSION -Pgradle.publish.key=$PUBLISH_KEY -Pgradle.publish.secret=$PUBLISH_SECRET
