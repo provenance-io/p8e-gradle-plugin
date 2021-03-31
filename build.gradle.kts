@@ -3,8 +3,9 @@ import org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 group = "io.provenance.p8e.p8e-publish"
-version = (project.property("version") as String?)?.takeUnless { it.isBlank() } ?: "1.0-SNAPSHOT"
-// version = '1.0-SNAPSHOT'
+version = (project.property("version") as String?)
+    ?.takeUnless { it.isBlank() || it == "unspecified" }
+    ?: "1.0-SNAPSHOT"
 
 plugins {
     id("com.bmuschko.nexus") version "2.3.1"
@@ -46,7 +47,7 @@ dependencies {
 
     implementation("org.reflections:reflections:0.9.10")
 
-    implementation("io.provenance.p8e:p8e-sdk:0.4.1")
+    implementation("io.provenance.p8e:p8e-sdk:0.6.0-scopespec-beta.1")
     // implementation("io.provenance.p8e:p8e-sdk:1.0-SNAPSHOT")
 
     implementation("commons-io:commons-io:2.8.0")
