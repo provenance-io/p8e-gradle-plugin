@@ -55,8 +55,8 @@ jobs:
           PUBLISH_SECRET: ${{ secrets.PUBLISH_SECRET }}
         if: github.event_name == 'release'
 
-        # - name: Upload coverage to Codecov
-        #   uses: codecov/codecov-action@v1.2.2
-        #   with:
-        #     token: ${{ secrets.CODECOV_TOKEN }}
-        #     directory: build/reports/jacoco/test/*.xml
+         - name: Upload coverage to Codecov
+           uses: codecov/codecov-action@v1.2.2
+           with:
+             token: ${{ secrets.CODECOV_TOKEN }}
+             directory: build/reports/jacoco/test/*.xml
