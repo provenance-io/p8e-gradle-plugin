@@ -48,8 +48,21 @@ jobs:
           #     PRIVATE_KEY: ${{ secrets.INTEGRATION_TEST_PRIVATE_KEY }}
           #   if: github.event_name == 'release'
 
+      - name: Install gpg secret key
+        run: |
+          echo -e "${{ secrets.OSSRH_GPG_SECRET_KEY }}" | gpg --batch --import
+          gpg --list-secret-keys --keyid-format LONG
+          gpg --export-secret-keys -a 3C4AF0C5AA9C0AB14D4A6D8D887F0DA0B7D30ABE > $GITHUB_WORKSPACE/release.gpg
+        if: github.event_name == 'release'
+
       - name: Publish to Gradle Plugin Repository
-        run: ./gradlew publishPlugins -Pversion=$VERSION -Pgradle.publish.key=$PUBLISH_KEY -Pgradle.publish.secret=$PUBLISH_SECRET
+        run: |
+          ./gradlew publishPlugins \
+            -Pversion=$VERSION \
+            -Pgradle.publish.key=$PUBLISH_KEY -Pgradle.publish.secret=$PUBLISH_SECRET \
+            -Psigning.keyId=B7D30ABE \
+            -Psigning.password=${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }} \
+            -Psigning.secretKeyRingFile=$GITHUB_WORKSPACE/release.gpg \
         env:
           PUBLISH_KEY: ${{ secrets.PUBLISH_KEY }}
           PUBLISH_SECRET: ${{ secrets.PUBLISH_SECRET }}
