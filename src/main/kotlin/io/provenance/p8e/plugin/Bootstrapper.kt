@@ -1,9 +1,14 @@
 package io.provenance.p8e.plugin
 
 import io.p8e.ContractManager
+import io.p8e.annotations.ScopeSpecification
+import io.p8e.annotations.ScopeSpecificationDefinition
 import io.p8e.proto.Common.ProvenanceReference
+import io.p8e.proto.ContractSpecs.ScopeSpec
+import io.p8e.proto.Domain.SpecMapping
 import io.p8e.proto.PK
 import io.p8e.spec.ContractSpecMapper
+import io.p8e.spec.P8eScopeSpecification
 import io.provenance.p8e.encryption.ecies.ECUtils
 import io.provenance.p8e.encryption.util.ByteUtil
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
@@ -53,6 +58,7 @@ internal class Bootstrapper(
         val protoJar = getJar(protoProject)
         val contractClassLoader = URLClassLoader(arrayOf(contractJar.toURI().toURL()), javaClass.classLoader)
         val contracts = findContracts(contractClassLoader)
+        val scopes = findScopes(contractClassLoader)
         val protos = findProtos(contractClassLoader)
 
         extension.locations.forEach { name, location ->
@@ -76,11 +82,43 @@ internal class Bootstrapper(
                     hashes.put(protoKey, it.hash)
                 }
 
+            val scopeSpecs = scopes.map { clazz ->
+                val definition = clazz.annotations
+                    .filter { it is ScopeSpecificationDefinition }
+                    .map { it as ScopeSpecificationDefinition }
+                    .first()
+
+                ScopeSpec.newBuilder()
+                    .setName(definition.name)
+                    .setDescription(definition.description)
+                    .addAllPartiesInvolved(definition.partiesInvolved.toList())
+                    .also { builder -> definition.websiteUrl.takeIf { it.isNotBlank() }?.run { builder.websiteUrl = this } }
+                    .also { builder -> definition.iconUrl.takeIf { it.isNotBlank() }?.run { builder.iconUrl = this } }
+                    .build()
+            }
+
             contracts
-                .map { clazz -> ContractSpecMapper.dehydrateSpec(clazz.kotlin, contractJarLocation, protoJarLocation) }
+                .map { clazz ->
+                    val scopeSpec = clazz.annotations
+                        .filter { it is ScopeSpecification }
+                        .map { it as ScopeSpecification }
+                        .first()
+                    val spec = ContractSpecMapper.dehydrateSpec(clazz.kotlin, contractJarLocation, protoJarLocation)
+
+                    spec to scopeSpec
+                }
                 .takeUnless { it.isNullOrEmpty() }
-                .also { specs -> project.logger.info("Saving ${specs?.size ?: 0} contract specifications") }
-                ?.let { specs -> manager.client.addSpec(specs) }
+                .also { project.logger.info("Saving ${it?.size ?: 0} contract specifications") }
+                ?.let {
+                    val (contractSpecs, specMappings) = it.unzip()
+                    val specMappingWrapper = specMappings.map { specMapping ->
+                        SpecMapping.newBuilder()
+                            .addAllScopeSpecifications(specMapping.names.toList())
+                            .build()
+                    }
+
+                    manager.client.addSpec(contractSpecs, specMappingWrapper, scopeSpecs)
+                }
                 ?: throw IllegalStateException("Could not find any subclasses of io.p8e.spec.P8eContract in ${contractJar.path}")
         }
 

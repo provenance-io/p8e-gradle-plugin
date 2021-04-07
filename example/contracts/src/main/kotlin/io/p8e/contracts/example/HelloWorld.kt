@@ -5,10 +5,12 @@ import io.p8e.annotations.Function
 import io.p8e.annotations.Input
 import io.p8e.annotations.Participants
 import io.p8e.annotations.ScopeSpecification
+import io.p8e.annotations.ScopeSpecificationDefinition
 import io.p8e.proto.ContractScope.Scope
 import io.p8e.proto.ContractSpecs.PartyType.*
 import io.p8e.proto.example.HelloWorldExample.ExampleName
 import io.p8e.spec.P8eContract
+import io.p8e.spec.P8eScopeSpecification
 
 @Participants(roles = [OWNER])
 @ScopeSpecification(names = ["io.p8e.contracts.example.helloWorld"])
@@ -22,5 +24,11 @@ open class HelloWorldContract(): P8eContract() {
             .build()
 }
 
+@ScopeSpecificationDefinition(
+    name = "io.p8e.contracts.example.helloWorld",
+    description = "A generic scope that allows for a lot of example hello world contracts.",
+    partiesInvolved = [OWNER],
+)
+open class HelloWorldScopeSpecification() : P8eScopeSpecification()
 
 data class HelloWorldData(@Fact(name = "name") val name: ExampleName, val scope: Scope) {}
