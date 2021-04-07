@@ -23,6 +23,7 @@ p8e gradle plugin allows for publishing p8e Contracts against a [p8e](https://gi
 
 
 WARNING: Versions prior to `1.0.0` should be considered unstable and API changes expected.
+WARNING: This plugin targets [provenance 0.40.0](https://github.com/provenance-io/provenance) and thus only builds on p8e supported branches for the time being.
 
 ## Overview
 

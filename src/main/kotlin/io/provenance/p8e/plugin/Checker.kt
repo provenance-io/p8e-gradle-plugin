@@ -1,6 +1,8 @@
 package io.provenance.p8e.plugin
 
 import io.p8e.annotations.Function
+import io.p8e.annotations.ScopeSpecification
+import io.p8e.annotations.ScopeSpecificationDefinition
 import io.p8e.proto.Common.ProvenanceReference
 import io.p8e.spec.ContractSpecMapper
 import org.gradle.api.Project
@@ -9,6 +11,7 @@ import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.functions
 
 class ContractDefinitionException(msg: String) : Exception(msg)
+class ScopeDefinitionException(msg: String) : Exception(msg)
 
 // TODO add tests for contract validation - will need to check cases hit in dehydrate spec as well
 internal class Checker(
@@ -24,6 +27,25 @@ internal class Checker(
         val contractJar = getJar(contractProject, "shadowJar")
         val contractClassLoader = URLClassLoader(arrayOf(contractJar.toURI().toURL()), javaClass.classLoader)
 
+        val scopeDefinitions = findScopes(contractClassLoader).map { clazz ->
+            project.logger.info("Found ${clazz.name}")
+
+            val definitions = clazz.annotations
+                .filter { it is ScopeSpecificationDefinition }
+                .map { it as ScopeSpecificationDefinition }
+
+            if (definitions.size != 1) {
+                throw ScopeDefinitionException("${clazz.name} - A P8eScopeSpecification subclass must have exactly one ScopeSpecificationDefinition annotation.")
+            }
+
+            definitions.first()
+        }
+        val scopeDefinitionsNameSet = scopeDefinitions.map { it.name }.toSet()
+
+        if (scopeDefinitions.map { it.name }.size != scopeDefinitionsNameSet.size) {
+            throw ScopeDefinitionException("ScopeSpecificationDefinition names must be unique")
+        }
+
         findContracts(contractClassLoader).forEach { clazz ->
             project.logger.info("Checking ${clazz.name}")
 
@@ -38,12 +60,24 @@ internal class Checker(
                 throw ContractDefinitionException("${clazz.name} must have at least one participant.")
             }
 
+            val scopeSpec = clazz.annotations
+                .filter { it is ScopeSpecification }
+                .map { it as ScopeSpecification }
+                .firstOrNull()
+                ?: throw ContractDefinitionException("${clazz.name} must contain a ScopeSpecification")
+
+            scopeSpec.names.forEach {
+                if (!scopeDefinitionsNameSet.contains(it)) {
+                    throw ScopeDefinitionException("${clazz.name} - ScopeSpecification of $scopeSpec is not defined as a ScopeSpecificationDefinition")
+                }
+            }
+
             clazz.kotlin.functions
                 .map { Pair(it, it.findAnnotation<Function>()) }
                 .filter { it.second != null }
                 .forEach { (func, annotation) ->
                     if (!participants.contains(annotation!!.invokedBy)) {
-                        throw ContractDefinitionException("Function invoker for $func is not a participant.")
+                        throw ContractDefinitionException("${clazz.name} - Function invoker for $func is not a participant.")
                     }
                 }
         }

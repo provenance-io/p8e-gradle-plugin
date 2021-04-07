@@ -21,6 +21,9 @@ fun getJar(project: Project, taskName: String = "jar"): File {
         ?: throw IllegalStateException("task :$taskName in ${project.name} could not be found")
 }
 
+fun findScopes(classLoader: ClassLoader): Set<Class<out io.p8e.spec.P8eScopeSpecification>> =
+    findClasses(io.p8e.spec.P8eScopeSpecification::class.java, classLoader)
+
 fun findContracts(classLoader: ClassLoader): Set<Class<out io.p8e.spec.P8eContract>> =
     findClasses(io.p8e.spec.P8eContract::class.java, classLoader)
 
