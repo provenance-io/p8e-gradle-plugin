@@ -51,9 +51,9 @@ jobs:
       - name: Install gpg secret key
         run: |
           export GPG_TTY=$(tty)
-          echo -e "${{ secrets.OSSRH_GPG_SECRET_KEY }}" | gpg --batch --import
+          echo -n "${{ secrets.OSSRH_GPG_SECRET_KEY }}" | base64 --decode | gpg --batch --import
           gpg --list-secret-keys --keyid-format LONG
-          gpg --export-secret-keys -a 3C4AF0C5AA9C0AB14D4A6D8D887F0DA0B7D30ABE > $GITHUB_WORKSPACE/release.gpg
+          echo -n "${{ secrets.OSSRH_GPG_SECRET_KEY }}" | base64 --decode > $GITHUB_WORKSPACE/release.gpg
         if: github.event_name == 'release'
 
       - name: Publish to Gradle Plugin Repository
