@@ -58,12 +58,10 @@ jobs:
 
       - name: Publish to Gradle Plugin Repository
         run: |
-          ./gradlew publishPlugins \
+          ./gradlew signArchives publishPlugins \
             -Pversion=$VERSION \
             -Pgradle.publish.key=$PUBLISH_KEY -Pgradle.publish.secret=$PUBLISH_SECRET \
-            -Psigning.keyId=B7D30ABE \
-            -Psigning.password=${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }} \
-            -Psigning.secretKeyRingFile=$GITHUB_WORKSPACE/release.gpg \
+            -Psigning.keyId=B7D30ABE -Psigning.password=${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }} -Psigning.secretKeyRingFile=$GITHUB_WORKSPACE/release.gpg
         env:
           PUBLISH_KEY: ${{ secrets.PUBLISH_KEY }}
           PUBLISH_SECRET: ${{ secrets.PUBLISH_SECRET }}
