@@ -1,0 +1,26 @@
+buildscript {
+    repositories {
+        jcenter()
+        mavenCentral()
+    }
+}
+
+plugins {
+    id "maven-publish"
+    id "java-library"
+}
+
+dependencies {
+    api project(':protos')
+
+    implementation("io.provenance.p8e:p8e-contract-base:0.6.0-testnet-beta.1")
+    // implementation("io.provenance.p8e:p8e-contract-base:1.0-SNAPSHOT")
+}
+
+publishing {
+    publications {
+        contract(MavenPublication) {
+            artifact tasks.jar
+        }
+    }
+}

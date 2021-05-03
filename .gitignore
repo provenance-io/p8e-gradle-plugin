@@ -8,13 +8,14 @@ lib/
 .idea/
 *.iml
 
-example/userHome
+example-kotlin/userHome
+example-java/userHome
 
 local.properties
 .sdkmanrc
 .env
 
-example/contracts/src/main/kotlin/io/p8e/contracts/example/ContractHash*.kt
-example/contracts/src/main/resources/META-INF/services/io.p8e.contracts.ContractHash
-example/protos/src/main/kotlin/io/p8e/proto/example/ProtoHash*.kt
-example/protos/src/main/resources/META-INF/services/io.p8e.proto.ProtoHash
+example-kotlin/contracts/src/main/kotlin/io/p8e/contracts/example/ContractHash*.java
+example-kotlin/contracts/src/main/resources/META-INF/services/io.p8e.contracts.ContractHash
+example-java/protos/src/main/kotlin/io/p8e/proto/example/ProtoHash*.java
+example-java/protos/src/main/resources/META-INF/services/io.p8e.proto.ProtoHash

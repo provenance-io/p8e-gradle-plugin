@@ -18,5 +18,6 @@ open class P8eExtension {
     // TODO what is a good default package path that is somehow derived from the current project?
     var contractHashPackage: String = ""
     var protoHashPackage: String = ""
+    var language: String = "java"
     var locations: Map<String, P8eLocationExtension> = emptyMap()
 }

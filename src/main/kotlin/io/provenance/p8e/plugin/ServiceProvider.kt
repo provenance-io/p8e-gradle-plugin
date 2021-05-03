@@ -8,24 +8,47 @@ import java.io.File
 
 data class ProjectPaths(
     val sourcePath: String,
-    val serviceProviderImplPath: String
+    val serviceProviderImplPath: String,
+    val language: Language,
 )
 
-// TODO classes should go at src/main/java instead so we don't need to depend on kotlin
+enum class Language {
+    JAVA,
+    KOTLIN,
+}
+
+fun Language.extension() = when(this) {
+    Language.KOTLIN -> "kt"
+    Language.JAVA -> "java"
+}
+
+fun String.language() = when(this) {
+    "kt" -> Language.KOTLIN
+    "java" -> Language.JAVA
+    else -> throw IllegalStateException("Could not convert $this to a language output. Accepts the following options [\"kt\", \"java\"]")
+}
+
 object ServiceProvider {
     val interfaceContractPackage = "io.p8e.contracts"
     val interfaceProtoPackage = "io.p8e.proto"
 
-    fun projectPaths(project: Project, _package: String): ProjectPaths {
-        val sourcePath = (listOf(project.projectDir.path, "src", "main", "kotlin") + _package.split("."))
+    fun projectPaths(project: Project, _package: String, language: Language): ProjectPaths {
+        val kotlinSourcePath = (listOf(project.projectDir.path, "src", "main", "kotlin") + _package.split("."))
             .joinToString(separator = File.separator)
+        val javaSourcePath = (listOf(project.projectDir.path, "src", "main", "java") + _package.split("."))
+            .joinToString(separator = File.separator)
+        val sourcePath = when (language) {
+            Language.KOTLIN -> kotlinSourcePath
+            Language.JAVA -> javaSourcePath
+        }
         val resourcePath = listOf(project.projectDir.path, "src", "main", "resources").joinToString(separator = File.separator)
         val serviceProviderPath = listOf(resourcePath, "META-INF").joinToString(separator = File.separator)
         val serviceProviderImplPath = listOf(serviceProviderPath, "services").joinToString(separator = File.separator)
 
         return ProjectPaths(
             sourcePath = sourcePath,
-            serviceProviderImplPath = serviceProviderImplPath
+            serviceProviderImplPath = serviceProviderImplPath,
+            language = language,
         )
     }
 
@@ -36,8 +59,35 @@ object ServiceProvider {
         contracts: Set<Class<out P8eContract>>,
         contractHash: String
     ) {
-        val contractHashContent =
-            """
+        val contractHashServiceContent = "${extension.contractHashPackage}.ContractHash$uid"
+        val projectPaths = projectPaths(project, extension.contractHashPackage, extension.language.language())
+
+        File(projectPaths.sourcePath).mkdirs()
+        File(projectPaths.serviceProviderImplPath).mkdirs()
+
+        listOf(projectPaths.sourcePath, "ContractHash$uid.${projectPaths.language.extension()}")
+            .joinToString(separator = File.separator)
+            .let { File(it) }
+            .also { it.delete() }
+            .also { it.createNewFile() }
+            .writeText(getContractHashContent(projectPaths, extension, uid, contracts, contractHash))
+
+        listOf(projectPaths.serviceProviderImplPath, "$interfaceContractPackage.ContractHash")
+            .joinToString(separator = File.separator)
+            .let { File(it) }
+            .also { it.delete() }
+            .also { it.createNewFile() }
+            .writeText(contractHashServiceContent)
+    }
+
+    fun getContractHashContent(
+        projectPaths: ProjectPaths,
+        extension: P8eExtension,
+        uid: String,
+        contracts: Set<Class<out P8eContract>>,
+        contractHash: String,
+    ) = when (projectPaths.language) {
+        Language.KOTLIN -> """
 package ${extension.contractHashPackage}
 
 import io.p8e.contracts.ContractHash
@@ -45,10 +95,10 @@ import io.p8e.contracts.ContractHash
 class ContractHash$uid : ContractHash {
 
     private val classes = ${
-        contracts.map { it.name.replace("\$", "\\$") }
-            .map { "\"$it\" to true" }
-            .joinToString(separator = ", ", prefix = "mapOf(", postfix = ")")
-    }
+                contracts.map { it.name.replace("\$", "\\$") }
+                    .map { "\"$it\" to true" }
+                    .joinToString(separator = ", ", prefix = "mapOf(", postfix = ")")
+            }
     
     override fun getClasses(): Map<String, Boolean> {
         return classes
@@ -62,26 +112,41 @@ class ContractHash$uid : ContractHash {
         return "$contractHash"
     }
 }
-            """
-        val contractHashServiceContent = "${extension.contractHashPackage}.ContractHash$uid"
-        val projectPaths = projectPaths(project, extension.contractHashPackage)
+        """
+        Language.JAVA -> """
+package ${extension.contractHashPackage};
 
-        File(projectPaths.sourcePath).mkdirs()
-        File(projectPaths.serviceProviderImplPath).mkdirs()
+import io.p8e.contracts.ContractHash;
 
-        listOf(projectPaths.sourcePath, "ContractHash$uid.kt")
-            .joinToString(separator = File.separator)
-            .let { File(it) }
-            .also { it.delete() }
-            .also { it.createNewFile() }
-            .writeText(contractHashContent)
+import java.util.Map;
+import java.util.HashMap;
 
-        listOf(projectPaths.serviceProviderImplPath, "$interfaceContractPackage.ContractHash")
-            .joinToString(separator = File.separator)
-            .let { File(it) }
-            .also { it.delete() }
-            .also { it.createNewFile() }
-            .writeText(contractHashServiceContent)
+class ContractHash$uid implements ContractHash {
+
+    private final Map<String, Boolean> classes = new HashMap<String, Boolean>() {{
+        ${
+            contracts.map { it.name }
+                .map { "put(\"$it\", true);" }
+                .joinToString(separator = "\n")
+        }
+    }};
+    
+    @Override
+    public Map<String, Boolean> getClasses() {
+        return classes;
+    }
+    
+    @Override
+    public String getUuid() {
+        return "$uid";
+    }
+
+    @Override
+    public String getHash() {
+        return "$contractHash";
+    }
+}
+        """
     }
 
     fun writeProtoHash(
@@ -91,8 +156,35 @@ class ContractHash$uid : ContractHash {
         protos: Set<Class<out com.google.protobuf.Message>>,
         protoHash: String
     ) {
-        val protoHashContent =
-            """
+        val protoHashServiceContent = "${extension.protoHashPackage}.ProtoHash$uid"
+        val projectPaths = projectPaths(project, extension.protoHashPackage, extension.language.language())
+
+        File(projectPaths.sourcePath).mkdirs()
+        File(projectPaths.serviceProviderImplPath).mkdirs()
+
+        listOf(projectPaths.sourcePath, "ProtoHash$uid.${projectPaths.language.extension()}")
+            .joinToString(separator = File.separator)
+            .let { File(it) }
+            .also { it.delete() }
+            .also { it.createNewFile() }
+            .writeText(getProtoHashContent(projectPaths, extension, uid, protos, protoHash))
+
+        listOf(projectPaths.serviceProviderImplPath, "$interfaceProtoPackage.ProtoHash")
+            .joinToString(separator = File.separator)
+            .let { File(it) }
+            .also { it.delete() }
+            .also { it.createNewFile() }
+            .writeText(protoHashServiceContent)
+    }
+
+    fun getProtoHashContent(
+        projectPaths: ProjectPaths,
+        extension: P8eExtension,
+        uid: String,
+        protos: Set<Class<out com.google.protobuf.Message>>,
+        protoHash: String,
+    ) = when (projectPaths.language) {
+        Language.KOTLIN -> """
 package ${extension.protoHashPackage}
 
 import io.p8e.proto.ProtoHash
@@ -100,10 +192,10 @@ import io.p8e.proto.ProtoHash
 class ProtoHash$uid : ProtoHash {
 
     private val classes = ${
-        protos.map { it.name.replace("\$", "\\$") }
-            .map { "\"$it\" to true" }
-            .joinToString(separator = ", ", prefix = "mapOf(", postfix = ")")
-    }
+            protos.map { it.name.replace("\$", "\\$") }
+                .map { "\"$it\" to true" }
+                .joinToString(separator = ", ", prefix = "mapOf(", postfix = ")")
+        }
 
     override fun getClasses(): Map<String, Boolean> {
         return classes
@@ -117,35 +209,50 @@ class ProtoHash$uid : ProtoHash {
         return "$protoHash"
     }
 }
-            """
-        val protoHashServiceContent = "${extension.protoHashPackage}.ProtoHash$uid"
-        val projectPaths = projectPaths(project, extension.protoHashPackage)
+        """
+        Language.JAVA -> """
+package ${extension.protoHashPackage};
 
-        File(projectPaths.sourcePath).mkdirs()
-        File(projectPaths.serviceProviderImplPath).mkdirs()
+import java.util.Map;
+import java.util.HashMap;
 
-        listOf(projectPaths.sourcePath, "ProtoHash$uid.kt")
-            .joinToString(separator = File.separator)
-            .let { File(it) }
-            .also { it.delete() }
-            .also { it.createNewFile() }
-            .writeText(protoHashContent)
+import io.p8e.proto.ProtoHash;
 
-        listOf(projectPaths.serviceProviderImplPath, "$interfaceProtoPackage.ProtoHash")
-            .joinToString(separator = File.separator)
-            .let { File(it) }
-            .also { it.delete() }
-            .also { it.createNewFile() }
-            .writeText(protoHashServiceContent)
+class ProtoHash$uid implements ProtoHash {
+
+    private final Map<String, Boolean> classes = new HashMap<String, Boolean>() {{
+        ${
+            protos.map { it.name }
+                .map { "put(\"$it\", true);" }
+                .joinToString(separator = "\n")
+        }
+    }};
+
+    @Override
+    public Map<String, Boolean> getClasses() {
+        return classes;
+    }
+    
+    @Override
+    public String getUuid() {
+        return "$uid";
+    }
+
+    @Override
+    public String getHash() {
+        return "$protoHash";
+    }
+}
+        """
     }
 
     fun cleanContracts(project: Project, extension: P8eExtension) {
-        val projectPaths = projectPaths(project, extension.contractHashPackage)
+        val projectPaths = projectPaths(project, extension.contractHashPackage, extension.language.language())
 
         File(projectPaths.sourcePath).mkdirs()
         File(projectPaths.serviceProviderImplPath).mkdirs()
 
-        FileUtils.listFiles(File(projectPaths.sourcePath), WildcardFileFilter("ContractHash*.kt"), WildcardFileFilter("."))
+        FileUtils.listFiles(File(projectPaths.sourcePath), WildcardFileFilter("ContractHash*.${projectPaths.language.extension()}"), WildcardFileFilter("."))
             .forEach { it.delete() }
 
         listOf(projectPaths.serviceProviderImplPath, "$interfaceContractPackage.ContractHash")
@@ -155,12 +262,12 @@ class ProtoHash$uid : ProtoHash {
     }
 
     fun cleanProtos(project: Project, extension: P8eExtension) {
-        val projectPaths = projectPaths(project, extension.protoHashPackage)
+        val projectPaths = projectPaths(project, extension.protoHashPackage, extension.language.language())
 
         File(projectPaths.sourcePath).mkdirs()
         File(projectPaths.serviceProviderImplPath).mkdirs()
 
-        FileUtils.listFiles(File(projectPaths.sourcePath), WildcardFileFilter("ProtoHash*.kt"), WildcardFileFilter("."))
+        FileUtils.listFiles(File(projectPaths.sourcePath), WildcardFileFilter("ProtoHash*.${projectPaths.language.extension()}"), WildcardFileFilter("."))
             .forEach { it.delete() }
 
         listOf(projectPaths.serviceProviderImplPath, "$interfaceProtoPackage.ProtoHash")

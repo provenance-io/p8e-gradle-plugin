@@ -44,8 +44,6 @@ execute contracts. These classes provide a mapping from P8eContracts and their a
 uberjar they are contained within. Ultimately, the p8e-sdk will make use of these classes via the
 [service provider](https://docs.oracle.com/javase/8/docs/api/java/util/ServiceLoader.html) facility.
 
-A fully functional minimal example project can be found [here](TODO - needs contract execution added).
-
 ## Tasks
 
 ```text
@@ -59,7 +57,10 @@ p8eJar - Builds jars for projects specified by "contractProject" and "protoProje
 
 ## Minimal Example
 
-This example is runnable from [here](https://github.com/provenance-io/p8e-gradle-plugin/blob/main/example).
+Two simple execution examples exist in the `example-java` and `example-kotlin` directories. See their
+respective README files for running instructions.
+
+Below is a sample gradle block written in `groovy`.
 
 ```groovy
 // This block specifies the configuration needed to connect to a p8e instance as well as the audience list
@@ -70,6 +71,8 @@ p8e {
     contractProject = "contracts" // defaults to "contract"
     protoProject = "protos" // defaults to "proto"
 
+    // Output source classes will be written in this language.
+    language = "java" // defaults to java - current options are ["java", "kt"]
     // Package locations that the ContractHash and ProtoHash source files will be written to.
     contractHashPackage = "io.p8e.contracts.example"
     protoHashPackage = "io.p8e.proto.example"
