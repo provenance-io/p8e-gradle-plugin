@@ -1,29 +1,26 @@
 import arrow.core.Either;
 import io.p8e.ContractManager;
-import io.p8e.contracts.example.HelloWorldContract;
+import io.p8e.contracts.examplejava.ExampleContracts.HelloWorldJavaContract;
 import io.p8e.exception.P8eError;
 import io.p8e.functional.ContractErrorHandler;
 import io.p8e.functional.ContractEventHandler;
 import io.p8e.proto.ContractSpecs;
-import io.p8e.proto.contract.HelloWorldExample;
+import io.p8e.proto.example.HelloWorldExample;
 import io.p8e.proxy.Contract;
-import io.provenance.core.extensions.LoggerExtensionsKt;
+import io.provenance.p8e.shared.extension.LoggerExtensionsKt;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import kotlin.jvm.functions.Function1;
 import org.slf4j.Logger;
-
-import io.provenance.core.extensions.ProvenanceExtensionsKt;
 
 public class Runner {
 
     public static void main(String[] args) throws InterruptedException {
         Logger log = LoggerExtensionsKt.logger(HelloWorldExample.class.getName());
 
-        String p8eUrl = System.getenv("ENV_URL");
-        String key = System.getenv("AFFILIATE_KEY");
+        String p8eUrl = System.getenv("API_URL");
+        String key = System.getenv("PRIVATE_KEY");
 
         CountDownLatch latch = new CountDownLatch(1);
         AtomicBoolean success = new AtomicBoolean(false);
@@ -33,8 +30,8 @@ public class Runner {
         String middleName = "Middle Name for " + scopeUuid;
         String lastName = "Last Name for " + scopeUuid;
 
-        ContractEventHandler<HelloWorldContract> completeHandler = contract -> {
-            if(ProvenanceExtensionsKt.toUuidProv(contract.getStagedExecutionUuid()) == executionUuid) {
+        ContractEventHandler<HelloWorldJavaContract> completeHandler = contract -> {
+            if(UUID.fromString(contract.getStagedExecutionUuid().getValue()).equals(executionUuid)) {
                 log.info("Contract Execution is successful, starting latch countdown.");
                 success.set(true);
                 latch.countDown();
@@ -45,19 +42,25 @@ public class Runner {
         };
 
         ContractErrorHandler errorHandler = envelopeError -> {
-            if(ProvenanceExtensionsKt.toUuidProv(envelopeError.getExecutionUuid()) == executionUuid) {
-                log.error("Contract Execution failed, starting latch countdown. " + envelopeError.getMessage());
+            if(UUID.fromString(envelopeError.getError().getExecutionUuid().getValue()).equals(executionUuid)) {
+                log.error("Contract Execution failed, starting latch countdown. " + envelopeError.getError().getMessage());
             }
             return true;
         };
 
         ContractManager cm = ContractManager.Companion.create(key, p8eUrl);
-        cm.watchBuilder(HelloWorldContract.class)
+        cm.watchBuilder(HelloWorldJavaContract.class)
                 .stepCompletion(completeHandler)
                 .error(errorHandler)
                 .watch();
 
-        Contract<HelloWorldContract> contract = cm.newContract(HelloWorldContract.class, ProvenanceExtensionsKt.toProtoUuidProv(scopeUuid), ContractSpecs.PartyType.OWNER, executionUuid);
+        Contract<HelloWorldJavaContract> contract = cm.newContract(
+                HelloWorldJavaContract.class,
+                scopeUuid,
+                executionUuid,
+                ContractSpecs.PartyType.OWNER,
+                "io.p8e.contracts.examplejava.helloWorld"
+        );
         contract.addProposedFact(
                 "name",
                 HelloWorldExample.ExampleName.newBuilder()
@@ -67,38 +70,31 @@ public class Runner {
                         .build()
         );
 
-        Either<P8eError, Contract<HelloWorldContract>> result = contract.execute();
-        result.map(new Function1<Contract<HelloWorldContract>, Object>() {
-            @Override
-            public Object invoke(Contract<HelloWorldContract> helloWorldContractContract) {
-                log.info("Accepted with scope " + scopeUuid + " and execution " + executionUuid);
+        Either<P8eError, Contract<HelloWorldJavaContract>> result = contract.execute();
+        result.map(resultInner -> {
+            log.info("Accepted with scope " + scopeUuid + " and execution " + executionUuid);
 
-                boolean latchSuccess = false;
+            boolean latchSuccess = false;
 
-                try {
-                    latchSuccess = latch.await(120, TimeUnit.SECONDS);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-
-                if(latchSuccess && success.get()) {
-                    log.info("Contract completed successfully!");
-                } else if (!latchSuccess) {
-                    log.error("Contract errored!");
-                } else {
-                    log.error("Contract timed out!");
-                }
-
-                return null;
+            try {
+                latchSuccess = latch.await(120, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
-        }).mapLeft(new Function1<P8eError, Object>() {
-                       @Override
-                       public Object invoke(P8eError p8eError) {
-                           log.error("Error with envelope " + HelloWorldContract.class.getName() + " " + p8eError);
-                           return null;
-                       }
-                   }
-        );
+
+            if(latchSuccess && success.get()) {
+                log.info("Contract completed successfully!");
+            } else if (!latchSuccess) {
+                log.error("Contract errored!");
+            } else {
+                log.error("Contract timed out!");
+            }
+
+            return null;
+        }).mapLeft(p8eError -> {
+            log.error("Error with envelope " + HelloWorldJavaContract.class.getName() + " " + p8eError);
+            return null;
+        });
 
         Thread.sleep(2_500);
         cm.close();

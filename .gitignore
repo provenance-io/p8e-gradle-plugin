@@ -15,7 +15,9 @@ local.properties
 .sdkmanrc
 .env
 
-example-kotlin/contracts/src/main/kotlin/io/p8e/contracts/example/ContractHash*.java
-example-kotlin/contracts/src/main/resources/META-INF/services/io.p8e.contracts.ContractHash
-example-java/protos/src/main/kotlin/io/p8e/proto/example/ProtoHash*.java
-example-java/protos/src/main/resources/META-INF/services/io.p8e.proto.ProtoHash
+ContractHash*.kt
+ContractHash*.java
+io.p8e.contracts.ContractHash
+ProtoHash*.kt
+ProtoHash*.java
+io.p8e.proto.ProtoHash

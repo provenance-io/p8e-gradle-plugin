@@ -121,7 +121,7 @@ import io.p8e.contracts.ContractHash;
 import java.util.Map;
 import java.util.HashMap;
 
-class ContractHash$uid implements ContractHash {
+public class ContractHash$uid implements ContractHash {
 
     private final Map<String, Boolean> classes = new HashMap<String, Boolean>() {{
         ${
@@ -218,7 +218,7 @@ import java.util.HashMap;
 
 import io.p8e.proto.ProtoHash;
 
-class ProtoHash$uid implements ProtoHash {
+public class ProtoHash$uid implements ProtoHash {
 
     private final Map<String, Boolean> classes = new HashMap<String, Boolean>() {{
         ${
