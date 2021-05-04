@@ -55,7 +55,7 @@ p8eClean - Removes all generated hash files and java service provider files.
 p8eJar - Builds jars for projects specified by "contractProject" and "protoProject".
 ```
 
-## Minimal Example
+## Usage
 
 Two simple execution examples exist in the `example-java` and `example-kotlin` directories. See their
 respective README files for running instructions.
@@ -63,6 +63,10 @@ respective README files for running instructions.
 Below is a sample gradle block written in `groovy`.
 
 ```groovy
+plugins {
+    id "io.provenance.p8e.p8e-publish" version "<see latest release>"
+}
+
 // This block specifies the configuration needed to connect to a p8e instance as well as the audience list
 // for all of the objects that will be created.
 p8e {
