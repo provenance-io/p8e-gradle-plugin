@@ -1,6 +1,6 @@
 # p8e-gradle-plugin
 
-p8e gradle plugin allows for publishing p8e Contracts against a [p8e](https://github.com/provenance-io/p8e) environment. See [p8e docs](https://app.gitbook.com/@provenance/s/provenance-docs/p8e/overview) for relevant background and associated material.
+p8e gradle plugin allows for publishing p8e Contracts against a [p8e](https://github.com/provenance-io/p8e) environment. See [p8e docs](https://docs.provenance.io/p8e/overview) for relevant background and associated material.
 
 ## Status
 
@@ -27,7 +27,7 @@ WARNING: This plugin targets [provenance 0.40.0](https://github.com/provenance-i
 
 ## Overview
 
-Having an understanding of [p8e](https://app.gitbook.com/@provenance/s/provenance-docs/p8e/overview) is strongly recommended.
+Having an understanding of [p8e](https://docs.provenance.io/p8e/overview) is strongly recommended.
 
 In order to execute contracts with the [p8e-sdk](https://github.com/provenance-io/p8e/tree/main/p8e-sdk), the contracts must be published into
 your p8e execution environment. This gradle plugin provides a set of tasks in order to accomplish that. Publishing contracts performs the following
