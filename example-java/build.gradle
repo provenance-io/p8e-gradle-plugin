@@ -20,9 +20,8 @@ buildscript {
 }
 
 plugins {
-    // TODO move back to official released version
-    // id "io.provenance.p8e.p8e-publish" version "0.3.2"
-    id "io.provenance.p8e.p8e-publish" version "1.0-SNAPSHOT"
+    id "io.provenance.p8e.p8e-publish" version "0.4.0-public-beta.1"
+    // id "io.provenance.p8e.p8e-publish" version "1.0-SNAPSHOT"
 }
 
 allprojects {
