@@ -47,7 +47,7 @@ dependencies {
 
     implementation("org.reflections:reflections:0.9.10")
 
-    implementation("io.provenance.p8e:p8e-sdk:0.6.0-public-release-beta.1")
+    implementation("io.provenance.p8e:p8e-sdk:0.6.0-testnet-1")
     // implementation("io.provenance.p8e:p8e-sdk:1.0-SNAPSHOT")
 
     implementation("commons-io:commons-io:2.8.0")
