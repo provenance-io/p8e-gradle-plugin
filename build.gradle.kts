@@ -21,14 +21,6 @@ repositories {
     mavenCentral()
     maven { url = uri("https://javadoc.jitpack.io") }
     maven { url = uri("https://plugins.gradle.org/m2/") }
-    maven {
-        name = "GitHubPackages"
-        url = uri("https://maven.pkg.github.com/provenance-io/p8e")
-        credentials {
-            username = System.getenv("GITHUB_ACTOR")
-            password = System.getenv("GITHUB_TOKEN")
-        }
-    }
 }
 
 val integrationTest: SourceSet by sourceSets.creating {
@@ -47,7 +39,7 @@ dependencies {
 
     implementation("org.reflections:reflections:0.9.10")
 
-    implementation("io.provenance.p8e:p8e-sdk:0.6.0-testnet-1")
+    implementation("io.provenance.p8e:p8e-sdk:0.7.3")
     // implementation("io.provenance.p8e:p8e-sdk:1.0-SNAPSHOT")
 
     implementation("commons-io:commons-io:2.8.0")

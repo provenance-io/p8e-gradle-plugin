@@ -48,7 +48,7 @@ public class Runner {
             return true;
         };
 
-        ContractManager cm = ContractManager.Companion.create(key, p8eUrl);
+        ContractManager cm = ContractManager.Companion.create(key, p8eUrl, 60_000);
         cm.watchBuilder(HelloWorldJavaContract.class)
                 .stepCompletion(completeHandler)
                 .error(errorHandler)
