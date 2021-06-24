@@ -13,7 +13,7 @@ dependencies{
     implementation project(":contracts")
     implementation project(":protos")
 
-    implementation "io.provenance.p8e:p8e-sdk:0.6.0-testnet-1"
+    implementation "io.provenance.p8e:p8e-sdk:0.7.3"
     // implementation "io.provenance.p8e:p8e-sdk:1.0-SNAPSHOT"
     implementation "ch.qos.logback:logback-classic:1.2.3"
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.4.32"

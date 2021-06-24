@@ -4,14 +4,6 @@ buildscript {
         jcenter()
         mavenCentral()
         maven { url 'https://javadoc.jitpack.io' }
-        maven {
-            name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/provenance-io/p8e")
-            credentials {
-                username = System.getenv("GITHUB_ACTOR")
-                password = System.getenv("GITHUB_TOKEN")
-            }
-        }
     }
 
     dependencies {
@@ -21,7 +13,7 @@ buildscript {
 }
 
 plugins {
-    id "io.provenance.p8e.p8e-publish" version "0.4.0"
+    id "io.provenance.p8e.p8e-publish" version "0.4.1"
     // id "io.provenance.p8e.p8e-publish" version "1.0-SNAPSHOT"
 }
 
@@ -34,14 +26,6 @@ allprojects {
         jcenter()
         mavenCentral()
         maven { url 'https://javadoc.jitpack.io' }
-        maven {
-            name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/provenance-io/p8e")
-            credentials {
-                username = System.getenv("GITHUB_ACTOR")
-                password = System.getenv("GITHUB_TOKEN")
-            }
-        }
     }
 }
 
