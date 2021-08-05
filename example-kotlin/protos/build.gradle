@@ -23,9 +23,6 @@ sourceSets.main.java.srcDirs += 'build/generated/source/proto/main/java'
 sourceSets.main.java.srcDirs += 'src/main/kotlin'
 
 dependencies {
-    implementation("io.provenance.p8e:p8e-contract-base:0.7.3")
-    // implementation("io.provenance.p8e:p8e-contract-base:1.0-SNAPSHOT")
-
     compile "com.google.protobuf:protobuf-java:$protobuf_version"
     compile "com.google.protobuf:protobuf-java-util:$protobuf_version"
 }

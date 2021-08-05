@@ -1,12 +1,13 @@
 package io.provenance.p8e.plugin
 
-import io.p8e.annotations.Function
-import io.p8e.annotations.ScopeSpecification
-import io.p8e.annotations.ScopeSpecificationDefinition
-import io.p8e.proto.Common.ProvenanceReference
-import io.p8e.spec.ContractSpecMapper
+import io.provenance.scope.contract.annotations.Function
+import io.provenance.scope.contract.annotations.ScopeSpecification
+import io.provenance.scope.contract.annotations.ScopeSpecificationDefinition
+import io.provenance.scope.contract.proto.Commons.ProvenanceReference
+import io.provenance.scope.sdk.ContractSpecMapper
 import org.gradle.api.Project
 import java.net.URLClassLoader
+import java.util.*
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.functions
 
@@ -46,6 +47,18 @@ internal class Checker(
             throw ScopeDefinitionException("ScopeSpecificationDefinition names must be unique")
         }
 
+        if (scopeDefinitions.map { it.uuid }.size != scopeDefinitionsNameSet.size) {
+            throw ScopeDefinitionException("ScopeSpecificationDefinition UUIDs must be unique")
+        }
+
+        scopeDefinitions.forEach { scopeDefinition ->
+            try {
+                UUID.fromString(scopeDefinition.uuid)
+            } catch (e: Exception) {
+                throw ScopeDefinitionException("ScopeSpecificationDefinition ${scopeDefinition.name} does not have a valid UUID - ${scopeDefinition.uuid}")
+            }
+        }
+
         findContracts(contractClassLoader).forEach { clazz ->
             project.logger.info("Checking ${clazz.name}")
 
@@ -60,15 +73,15 @@ internal class Checker(
                 throw ContractDefinitionException("${clazz.name} must have at least one participant.")
             }
 
-            val scopeSpec = clazz.annotations
+            val scopeSpecification = clazz.annotations
                 .filter { it is ScopeSpecification }
                 .map { it as ScopeSpecification }
                 .firstOrNull()
                 ?: throw ContractDefinitionException("${clazz.name} must contain a ScopeSpecification")
 
-            scopeSpec.names.forEach {
+            scopeSpecification.names.forEach {
                 if (!scopeDefinitionsNameSet.contains(it)) {
-                    throw ScopeDefinitionException("${clazz.name} - ScopeSpecification of $scopeSpec is not defined as a ScopeSpecificationDefinition")
+                    throw ScopeDefinitionException("${clazz.name} - ScopeSpecification of $scopeSpecification is not defined as a ScopeSpecificationDefinition")
                 }
             }
 

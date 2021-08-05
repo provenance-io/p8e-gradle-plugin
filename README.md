@@ -84,8 +84,11 @@ p8e {
     // specifies all of the p8e locations that this plugin will bootstrap to.
     locations = [
         local: new io.provenance.p8e.plugin.P8eLocationExtension(
-            url: System.getenv('API_URL'),
-            privateKey: System.getenv('PRIVATE_KEY'),
+            osUrl: System.getenv('OS_GRPC_URL'),
+            provenanceUrl: System.getenv('PROVENANCE_GRPC_URL'),
+            chainId: System.getenv('CHAIN_ID'),
+            encryptionPrivateKey: System.getenv('ENCRYPTION_PRIVATE_KEY'),
+            signingPrivateKey: System.getenv('SIGNING_PRIVATE_KEY'),
 
             audience: [
                 local1: new io.provenance.p8e.plugin.P8ePartyExtension(

@@ -1,6 +1,6 @@
 package io.provenance.p8e.plugin
 
-import io.p8e.spec.P8eContract
+import io.provenance.scope.contract.spec.P8eContract
 import org.apache.commons.io.FileUtils
 import org.apache.commons.io.filefilter.WildcardFileFilter
 import org.gradle.api.Project

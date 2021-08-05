@@ -1,7 +1,9 @@
 package io.provenance.p8e.plugin
 
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.tasks.bundling.AbstractArchiveTask
 
 private const val EXTENSION_NAME = "p8e"
 
@@ -18,6 +20,15 @@ class ContractPlugin : Plugin<Project> {
         project.plugins.apply("maven-publish")
         project.subprojects.forEach {
             it.plugins.apply("com.github.johnrengelman.shadow")
+
+            it.tasks.withType(AbstractArchiveTask::class.java).configureEach { task ->
+                task.isPreserveFileTimestamps = false
+                task.isReproducibleFileOrder = true
+            }
+
+            it.tasks.withType(ShadowJar::class.java) { task ->
+                task.minimize()
+            }
         }
 
         project.evaluationDependsOnChildren()

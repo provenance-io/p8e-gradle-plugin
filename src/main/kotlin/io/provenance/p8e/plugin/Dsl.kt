@@ -7,9 +7,12 @@ open class P8ePartyExtension {
 }
 
 open class P8eLocationExtension {
-    var privateKey: String? = ""
-    var url: String? = ""
+    var encryptionPrivateKey: String? = ""
+    var signingPrivateKey: String? = ""
+    var osUrl: String? = ""
+    var provenanceUrl: String? = ""
     var audience: Map<String, P8ePartyExtension> = emptyMap()
+    var chainId: String? = ""
 }
 
 open class P8eExtension {

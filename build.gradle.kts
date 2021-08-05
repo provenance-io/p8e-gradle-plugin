@@ -39,15 +39,31 @@ dependencies {
 
     implementation("org.reflections:reflections:0.9.10")
 
-    implementation("io.provenance.p8e:p8e-sdk:0.7.3")
-    // implementation("io.provenance.p8e:p8e-sdk:1.0-SNAPSHOT")
+    implementation("io.provenance.scope:sdk:1.0-SNAPSHOT")
+    // implementation("io.provenance.scope:sdk:1.0-SNAPSHOT")
+    implementation("io.provenance.protobuf:pb-proto-java:1.5.0")
+
+    implementation("io.grpc:grpc-protobuf:1.39.0")
+    implementation("io.grpc", "grpc-stub", "1.39.0")
 
     implementation("commons-io:commons-io:2.8.0")
     implementation("com.google.protobuf:protobuf-java:3.12.0")
     implementation("org.bouncycastle:bcprov-jdk15on:1.68")
 
+    runtimeOnly("io.grpc", "grpc-netty-shaded", "1.39.0")
+
     // third party plugins that this plugin will apply
     implementation("com.github.jengelman.gradle.plugins:shadow:6.1.0")
+
+    // added for copied StdSignature functionality
+    implementation("com.github.komputing.kethereum:crypto:0.83.4")
+    implementation("com.github.komputing.kethereum:crypto_api:0.83.4")
+    implementation("com.github.komputing.kethereum:crypto_impl_bouncycastle:0.83.4")
+    implementation("com.fasterxml.jackson.core:jackson-core:2.12.2")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.12.2")
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.12.2")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.12.2")
+    implementation("com.fasterxml.jackson.core:jackson-annotations:2.12.2")
 
     testImplementation("io.kotest:kotest-runner-junit5:4.4.+")
     "integrationTestImplementation"("io.kotest:kotest-runner-junit5:4.4.+")
