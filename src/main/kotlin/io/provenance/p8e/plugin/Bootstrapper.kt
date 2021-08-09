@@ -245,12 +245,12 @@ internal class Bootstrapper(
                     .filter { it is ScopeSpecificationDefinition }
                     .map { it as ScopeSpecificationDefinition }
                     .first()
-                val id = MetadataAddress.forScopeSpecification(UUID.fromString(definition.uuid)).toString()
+                val id = MetadataAddress.forScopeSpecification(UUID.fromString(definition.uuid)).bytes
 
                 scopeSpecificationNameToUuid[definition.name] = UUID.fromString(definition.uuid)
 
                 ScopeSpecification.newBuilder()
-                    .setSpecificationId(ByteString.copyFrom(id, Charsets.UTF_8))
+                    .setSpecificationId(ByteString.copyFrom(id))
                     .setDescription(Description.newBuilder()
                         .setName(definition.name)
                         .setDescription(definition.description)
@@ -283,12 +283,9 @@ internal class Bootstrapper(
 
                 if (specs.isNotEmpty()) {
                     tx.addAll(specs.map { spec ->
-                        val uuid = MetadataAddress.fromBech32(spec.specificationId.toStringUtf8())
-
                         MsgWriteScopeSpecificationRequest.newBuilder()
-                            .setSpecUuid(uuid.getPrimaryUuid().toString())
                             .addSigners(pbAddress)
-                            .setSpecification(spec.toBuilder().clearSpecificationId().build())
+                            .setSpecification(spec)
                             .build()
                     })
                 }
@@ -330,10 +327,10 @@ internal class Bootstrapper(
                 isNew
 
             }.map { spec ->
-                val id = MetadataAddress.forContractSpecification(spec.uuid()).toString()
+                val id = MetadataAddress.forContractSpecification(spec.uuid()).bytes
 
                 ContractSpecification.newBuilder()
-                    .setSpecificationId(ByteString.copyFrom(id, Charsets.UTF_8))
+                    .setSpecificationId(ByteString.copyFrom(id))
                     .setDescription(Description.newBuilder()
                         .setDescription(spec.definition.resourceLocation.classname)
                         .setName(spec.definition.name)
@@ -349,12 +346,9 @@ internal class Bootstrapper(
 
                 if (specs.isNotEmpty()) {
                     tx.addAll(specs.map { spec ->
-                        val uuid = MetadataAddress.fromBech32(spec.specificationId.toStringUtf8())
-
                         MsgWriteContractSpecificationRequest.newBuilder()
-                            .setSpecUuid(uuid.getPrimaryUuid().toString())
                             .addSigners(pbAddress)
-                            .setSpecification(spec.toBuilder().clearSpecificationId().build())
+                            .setSpecification(spec)
                             .build()
                     })
                 }
@@ -362,14 +356,14 @@ internal class Bootstrapper(
 
             // add all new scope spec to contract spec mappings
             newContractSpecifications.forEach { spec ->
-                val address = MetadataAddress.fromBech32(spec.specificationId.toStringUtf8())
+                val address = MetadataAddress.fromBytes(spec.specificationId.toByteArray())
 
                 contractSpecificationUuidToScopeNames.getValue(address.getPrimaryUuid()).forEach { scopeSpecName ->
                     val uuid = scopeSpecificationNameToUuid.getValue(scopeSpecName)
                     val scopeSpecificationAddress = MetadataAddress.forScopeSpecification(uuid)
 
                     tx.add(MsgAddContractSpecToScopeSpecRequest.newBuilder()
-                        .setScopeSpecificationId(ByteString.copyFrom(scopeSpecificationAddress.toString(), Charsets.UTF_8))
+                        .setScopeSpecificationId(ByteString.copyFrom(scopeSpecificationAddress.bytes))
                         .setContractSpecificationId(spec.specificationId)
                         .addSigners(pbAddress)
                         .build()
@@ -377,7 +371,7 @@ internal class Bootstrapper(
                 }
             }
 
-            // TODO handle adding ContractSpecToScopeSpec's for existing ContractSpecifications that add a new ScopeSpecification
+            / TODO handle adding ContractSpecToScopeSpec's for existing ContractSpecifications that add a new ScopeSpecification
 
             // TODO record specs?
 
@@ -392,17 +386,22 @@ internal class Bootstrapper(
                     .setAddress(pbAddress)
                     .build()
                 ).run { account.unpack(Auth.BaseAccount::class.java) }
-            val signedTx = signTx(location, txBody, accountInfo.accountNumber, accountInfo.sequence, pbSigner)
-            project.logger.info("signed tx = $signedTx")
+            val signedSimulateTx = signTx(location, txBody, accountInfo.accountNumber, accountInfo.sequence, pbSigner)
             val estimate = serviceClient.withDeadlineAfter(10, TimeUnit.SECONDS)
-                .simulate(SimulateRequest.newBuilder().setTx(signedTx).build())
-            project.logger.info("estimate response = $estimate")
-            // val response = serviceClient.withDeadlineAfter(20, TimeUnit.SECONDS)
-            //     .broadcastTx(BroadcastTxRequest.newBuilder()
-            //         .setTxBytes(signedTx)
-            //         .setMode(BroadcastMode.BROADCAST_MODE_BLOCK)
-            //         .build()
-            //     )
+                .simulate(SimulateRequest.newBuilder().setTx(signedSimulateTx).build())
+                .let { GasEstimate(it.gasInfo.gasUsed) }
+
+            project.logger.info("signed tx = $signedSimulateTx")
+
+            val signedTx = signTx(location, txBody, accountInfo.accountNumber, accountInfo.sequence, pbSigner, gasEstimate = estimate)
+            val response = serviceClient.withDeadlineAfter(20, TimeUnit.SECONDS)
+                .broadcastTx(BroadcastTxRequest.newBuilder()
+                    .setTxBytes(ByteString.copyFrom(signedTx.toByteArray()))
+                    .setMode(BroadcastMode.BROADCAST_MODE_BLOCK)
+                    .build()
+                )
+
+            project.logger.info("tx response = $response")
             // TODO parse response and verify it was successful
 
             provenanceChannel.shutdown()
