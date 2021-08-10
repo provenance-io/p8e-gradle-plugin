@@ -37,11 +37,15 @@ import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
 import io.provenance.metadata.v1.ContractSpecification
 import io.provenance.metadata.v1.ContractSpecificationRequest
+import io.provenance.metadata.v1.DefinitionType
 import io.provenance.metadata.v1.Description
+import io.provenance.metadata.v1.InputSpecification
 import io.provenance.metadata.v1.MsgAddContractSpecToScopeSpecRequest
 import io.provenance.metadata.v1.MsgWriteContractSpecificationRequest
+import io.provenance.metadata.v1.MsgWriteRecordSpecificationRequest
 import io.provenance.metadata.v1.MsgWriteScopeSpecificationRequest
 import io.provenance.metadata.v1.QueryGrpc
+import io.provenance.metadata.v1.RecordSpecification
 import io.provenance.metadata.v1.PartyType as ProvenancePartyType
 import io.provenance.objectstore.proto.Objects
 import io.provenance.metadata.v1.ScopeSpecification
@@ -59,6 +63,8 @@ import io.provenance.scope.sdk.Affiliate
 import io.provenance.scope.sdk.Client
 import io.provenance.scope.sdk.ClientConfig
 import io.provenance.scope.sdk.ContractSpecMapper
+import io.provenance.scope.sdk.ObjectHash
+import io.provenance.scope.sdk.SharedClient
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
 import org.bouncycastle.jce.ECNamedCurveTable
@@ -150,9 +156,10 @@ fun ContractSpec.uuid(): UUID {
         .toByteArray()
         .toUuid()
 }
-// TODO object store response to provenance reference proto
-fun Objects.ObjectResponse.toReference(): ProvenanceReference {
-    return ProvenanceReference.getDefaultInstance()
+fun ObjectHash.toReference(): ProvenanceReference {
+    return ProvenanceReference.newBuilder()
+        .setHash(this.value)
+        .build()
 }
 
 internal class Bootstrapper(
@@ -196,9 +203,9 @@ internal class Bootstrapper(
             project.logger.info("Publishing contracts - location: $name object-store url: ${location.osUrl} provenance url: ${location.provenanceUrl}")
 
             val config = ClientConfig(
-                jarCacheSizeInBytes = 0L,
-                specCacheSizeInBytes = 0L,
-                recordCacheSizeInBytes = 0L,
+                cacheJarSizeInBytes = 0L,
+                cacheSpecSizeInBytes = 0L,
+                cacheRecordSizeInBytes = 0L,
 
                 osGrpcUrl = URI(location.osUrl!!),
                 osGrpcDeadlineMs = 60 * 1_000L,
@@ -212,7 +219,7 @@ internal class Bootstrapper(
                 encryptionKeyRef = DirectKeyRef(encryptionKeyPair.public, encryptionKeyPair.private),
                 PartyType.OWNER,
             )
-            val sdk = Client(config, affiliate)
+            val sdk = Client(SharedClient(config), affiliate)
             val provenanceUri = URI(location.provenanceUrl!!)
             val provenanceChannel = ManagedChannelBuilder
                 .forAddress(provenanceUri.host, provenanceUri.port)
@@ -222,19 +229,19 @@ internal class Bootstrapper(
 
             val contractJarLocation = storeObject(sdk, contractJar, location)
                 .also {
-                    require (it.hash == hashes.getOrDefault(contractKey, it.hash)) {
-                        "Received different hash for the same contract jar ${it.hash.base64Encode()} ${hashes.getValue(contractKey)}"
+                    require (it.value == hashes.getOrDefault(contractKey, it.value)) {
+                        "Received different hash for the same contract jar ${it.value} ${hashes.getValue(contractKey)}"
                     }
 
-                    hashes[contractKey] = it.hash.base64Encode()
+                    hashes[contractKey] = it.value
                 }
             val protoJarLocation = storeObject(sdk, protoJar, location)
                 .also {
-                    require (it.hash == hashes.getOrDefault(protoKey, it.hash)) {
-                        "Received different hash for the same proto jar ${it.hash.base64Encode()} ${hashes.getValue(protoKey)}"
+                    require (it.value == hashes.getOrDefault(protoKey, it.value)) {
+                        "Received different hash for the same proto jar ${it.value} ${hashes.getValue(protoKey)}"
                     }
 
-                    hashes[protoKey] = it.hash.base64Encode()
+                    hashes[protoKey] = it.value
                 }
 
 
@@ -264,11 +271,14 @@ internal class Bootstrapper(
             }
             val newScopeSpecifications = scopeSpecifications.filter { spec ->
                 val metadataClient = QueryGrpc.newBlockingStub(provenanceChannel).withDeadlineAfter(10, TimeUnit.SECONDS)
+                val uuid = MetadataAddress.fromBytes(spec.specificationId.toByteArray()).getPrimaryUuid()
 
                 val existingSpec = metadataClient.scopeSpecification(ScopeSpecificationRequest.newBuilder()
-                    .setSpecificationId(spec.specificationId.toUuid().toString())
+                    .setSpecificationId(uuid.toString())
                     .build()
                 )
+
+                project.logger.info("uuid = $uuid message = $existingSpec")
 
                 // at this time we only post scope specifications when it doesn't already exist
                 val isNew = existingSpec.scopeSpecification.specification.description.name.isEmpty()
@@ -325,11 +335,11 @@ internal class Bootstrapper(
                 }
 
                 isNew
-
             }.map { spec ->
+                val recordSpecifications = mutableListOf<RecordSpecification>()
                 val id = MetadataAddress.forContractSpecification(spec.uuid()).bytes
 
-                ContractSpecification.newBuilder()
+                val contractSpecification = ContractSpecification.newBuilder()
                     .setSpecificationId(ByteString.copyFrom(id))
                     .setDescription(Description.newBuilder()
                         .setDescription(spec.definition.resourceLocation.classname)
@@ -341,21 +351,54 @@ internal class Bootstrapper(
                     .setHash(spec.uuid().toByteArray().base64Encode())
                     .setClassName(spec.definition.resourceLocation.classname)
                     .build()
+
+                spec.functionSpecsList.forEach { functionSpec ->
+                    val id = MetadataAddress.forRecordSpecification(spec.uuid(), functionSpec.outputSpec.spec.name).bytes
+
+                    val recordSpec = RecordSpecification.newBuilder()
+                        .setSpecificationId(ByteString.copyFrom(id))
+                        .setName(functionSpec.outputSpec.spec.name)
+                        .addAllInputs(functionSpec.inputSpecsList.map { inputSpec ->
+                            InputSpecification.newBuilder()
+                                .setName(inputSpec.name)
+                                .setTypeName(inputSpec.resourceLocation.classname)
+                                .setHash(inputSpec.resourceLocation.ref.hash)
+                                .build()
+                        })
+                        .setTypeName(functionSpec.outputSpec.spec.resourceLocation.classname)
+                        .setResultType(DefinitionType.DEFINITION_TYPE_PROPOSED)
+                        .addAllResponsibleParties(listOf(functionSpec.invokerParty.toProv()))
+                        .build()
+
+                    recordSpecifications.add(recordSpec)
+                }
+
+                Pair(contractSpecification, recordSpecifications)
             }.also { specs ->
                 project.logger.info("Adding ${specs.size} contract specification(s) to batch")
 
-                if (specs.isNotEmpty()) {
-                    tx.addAll(specs.map { spec ->
+                specs.map { (contractSpecification, recordSpecifications) ->
+                    tx.add(
                         MsgWriteContractSpecificationRequest.newBuilder()
                             .addSigners(pbAddress)
+                            .setSpecification(contractSpecification)
+                            .build()
+                    )
+
+                    tx.addAll(recordSpecifications.map { spec ->
+                        val contractSpecAddress = MetadataAddress.fromBytes(spec.specificationId.toByteArray())
+
+                        MsgWriteRecordSpecificationRequest.newBuilder()
+                            .addSigners(pbAddress)
                             .setSpecification(spec)
+                            .setContractSpecUuid(contractSpecAddress.getPrimaryUuid().toString())
                             .build()
                     })
                 }
             }
 
             // add all new scope spec to contract spec mappings
-            newContractSpecifications.forEach { spec ->
+            newContractSpecifications.forEach { (spec, _) ->
                 val address = MetadataAddress.fromBytes(spec.specificationId.toByteArray())
 
                 contractSpecificationUuidToScopeNames.getValue(address.getPrimaryUuid()).forEach { scopeSpecName ->
@@ -371,38 +414,38 @@ internal class Bootstrapper(
                 }
             }
 
-            / TODO handle adding ContractSpecToScopeSpec's for existing ContractSpecifications that add a new ScopeSpecification
-
-            // TODO record specs?
+            // TODO handle adding ContractSpecToScopeSpec's for existing ContractSpecifications that add a new ScopeSpecification
 
             // TODO move back to debug later
             project.logger.info("tx batch: $tx")
 
-            val serviceClient = ServiceGrpc.newBlockingStub(provenanceChannel)
-            val authClient = cosmos.auth.v1beta1.QueryGrpc.newBlockingStub(provenanceChannel)
-            val txBody = tx.toTxBody()
-            val accountInfo = authClient.withDeadlineAfter(10, TimeUnit.SECONDS)
-                .account(QueryOuterClass.QueryAccountRequest.newBuilder()
-                    .setAddress(pbAddress)
-                    .build()
-                ).run { account.unpack(Auth.BaseAccount::class.java) }
-            val signedSimulateTx = signTx(location, txBody, accountInfo.accountNumber, accountInfo.sequence, pbSigner)
-            val estimate = serviceClient.withDeadlineAfter(10, TimeUnit.SECONDS)
-                .simulate(SimulateRequest.newBuilder().setTx(signedSimulateTx).build())
-                .let { GasEstimate(it.gasInfo.gasUsed) }
+            if (!tx.isEmpty()) {
+                val serviceClient = ServiceGrpc.newBlockingStub(provenanceChannel)
+                val authClient = cosmos.auth.v1beta1.QueryGrpc.newBlockingStub(provenanceChannel)
+                val txBody = tx.toTxBody()
+                val accountInfo = authClient.withDeadlineAfter(10, TimeUnit.SECONDS)
+                    .account(QueryOuterClass.QueryAccountRequest.newBuilder()
+                        .setAddress(pbAddress)
+                        .build()
+                    ).run { account.unpack(Auth.BaseAccount::class.java) }
+                val signedSimulateTx = signTx(location, txBody, accountInfo.accountNumber, accountInfo.sequence, pbSigner)
+                val estimate = serviceClient.withDeadlineAfter(10, TimeUnit.SECONDS)
+                    .simulate(SimulateRequest.newBuilder().setTx(signedSimulateTx).build())
+                    .let { GasEstimate(it.gasInfo.gasUsed) }
 
-            project.logger.info("signed tx = $signedSimulateTx")
+                project.logger.info("signed tx = $signedSimulateTx")
 
-            val signedTx = signTx(location, txBody, accountInfo.accountNumber, accountInfo.sequence, pbSigner, gasEstimate = estimate)
-            val response = serviceClient.withDeadlineAfter(20, TimeUnit.SECONDS)
-                .broadcastTx(BroadcastTxRequest.newBuilder()
-                    .setTxBytes(ByteString.copyFrom(signedTx.toByteArray()))
-                    .setMode(BroadcastMode.BROADCAST_MODE_BLOCK)
-                    .build()
-                )
+                val signedTx = signTx(location, txBody, accountInfo.accountNumber, accountInfo.sequence, pbSigner, gasEstimate = estimate)
+                val response = serviceClient.withDeadlineAfter(20, TimeUnit.SECONDS)
+                    .broadcastTx(BroadcastTxRequest.newBuilder()
+                        .setTxBytes(ByteString.copyFrom(signedTx.toByteArray()))
+                        .setMode(BroadcastMode.BROADCAST_MODE_BLOCK)
+                        .build()
+                    )
 
-            project.logger.info("tx response = $response")
-            // TODO parse response and verify it was successful
+                project.logger.info("tx response = $response")
+                // TODO parse response and verify it was successful
+            }
 
             provenanceChannel.shutdown()
             if (!provenanceChannel.awaitTermination(10, TimeUnit.SECONDS)) {
@@ -424,19 +467,21 @@ internal class Bootstrapper(
     // TODO move on to scope specification saving/editing - probably need to add uuid to annotation for this
     // TODO add contract spec saving to chain? - what needs to be done here so that we don't need to save the contract spec to object-store in package contract like before
 
-    fun storeObject(client: Client, jar: File, location: P8eLocationExtension): Objects.ObjectResponse {
+    fun storeObject(client: Client, jar: File, location: P8eLocationExtension): ObjectHash {
         val contentLength = jar.length()
 
-        return client.osClient.putJar(FileInputStream(jar), client.affiliate, contentLength, location.audience.values.map { it.toPublicKey() }.toSet())
-            .also { project.logger.info("Saved jar ${jar.path} with hash ${it.hash.base64Encode()} size = ${it.metadata.contentLength}") }
+        return client.inner.osClient
+            .putJar(FileInputStream(jar), client.affiliate, contentLength, location.audience.values.map { it.toPublicKey() }.toSet()).get()
+            .also { project.logger.info("Saved jar ${jar.path} with hash ${it.value} size = $contentLength") }
     }
 
-    fun storeObject(client: Client, spec: ContractSpec, location: P8eLocationExtension): Objects.ObjectResponse {
+    fun storeObject(client: Client, spec: ContractSpec, location: P8eLocationExtension): ObjectHash {
         // TODO move to 16 bytes
-        return client.osClient.putRecord(spec, client.affiliate, location.audience.values.map { it.toPublicKey() }.toSet())
+        return client.inner.osClient
+            .putRecord(spec, client.affiliate, location.audience.values.map { it.toPublicKey() }.toSet()).get()
             // TODO move to debug later
             // TODO find the name field
-            .also { project.logger.info("Saved contract specification ${spec.definition.resourceLocation.classname} with hash ${it.hash.base64Encode()} size = ${it.metadata.contentLength}") }
+            .also { project.logger.info("Saved contract specification ${spec.definition.resourceLocation.classname} with hash ${it.value} size = ${spec.serializedSize}") }
     }
 
     fun getKeyPair(privateKey: String): KeyPair {
