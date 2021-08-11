@@ -29,8 +29,8 @@ fun String.language() = when(this) {
 }
 
 object ServiceProvider {
-    val interfaceContractPackage = "io.p8e.contracts"
-    val interfaceProtoPackage = "io.p8e.proto"
+    val interfaceContractPackage = "io.provenance.scope.contract.contracts"
+    val interfaceProtoPackage = "io.provenance.scope.contract.proto"
 
     fun projectPaths(project: Project, _package: String, language: Language): ProjectPaths {
         val kotlinSourcePath = (listOf(project.projectDir.path, "src", "main", "kotlin") + _package.split("."))
@@ -90,7 +90,7 @@ object ServiceProvider {
         Language.KOTLIN -> """
 package ${extension.contractHashPackage}
 
-import io.p8e.contracts.ContractHash
+import io.provenance.scope.contract.contracts.ContractHash
 
 class ContractHash$uid : ContractHash {
 
@@ -116,7 +116,7 @@ class ContractHash$uid : ContractHash {
         Language.JAVA -> """
 package ${extension.contractHashPackage};
 
-import io.p8e.contracts.ContractHash;
+import io.provenance.scope.contract.contracts.ContractHash;
 
 import java.util.Map;
 import java.util.HashMap;
@@ -187,7 +187,7 @@ public class ContractHash$uid implements ContractHash {
         Language.KOTLIN -> """
 package ${extension.protoHashPackage}
 
-import io.p8e.proto.ProtoHash
+import io.provenance.scope.contract.proto.ProtoHash
 
 class ProtoHash$uid : ProtoHash {
 
@@ -216,7 +216,7 @@ package ${extension.protoHashPackage};
 import java.util.Map;
 import java.util.HashMap;
 
-import io.p8e.proto.ProtoHash;
+import io.provenance.scope.contract.proto.ProtoHash;
 
 public class ProtoHash$uid implements ProtoHash {
 
