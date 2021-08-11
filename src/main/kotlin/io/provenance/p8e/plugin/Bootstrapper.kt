@@ -33,7 +33,6 @@ import cosmos.tx.v1beta1.ServiceOuterClass.BroadcastMode
 import cosmos.tx.v1beta1.ServiceOuterClass.BroadcastTxRequest
 import cosmos.tx.v1beta1.ServiceOuterClass.SimulateRequest
 import cosmos.tx.v1beta1.TxOuterClass.*
-import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
 import io.provenance.metadata.v1.ContractSpecification
 import io.provenance.metadata.v1.ContractSpecificationRequest
@@ -47,7 +46,6 @@ import io.provenance.metadata.v1.MsgWriteScopeSpecificationRequest
 import io.provenance.metadata.v1.QueryGrpc
 import io.provenance.metadata.v1.RecordSpecification
 import io.provenance.metadata.v1.PartyType as ProvenancePartyType
-import io.provenance.objectstore.proto.Objects
 import io.provenance.metadata.v1.ScopeSpecification
 import io.provenance.metadata.v1.ScopeSpecificationRequest
 import io.provenance.scope.contract.annotations.ScopeSpecificationDefinition
