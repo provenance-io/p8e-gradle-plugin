@@ -2,14 +2,15 @@ package io.p8e.examplejava;
 
 import io.p8e.annotations.Fact;
 import io.p8e.proto.example.HelloWorldExample;
+import io.p8e.proto.ContractScope.Scope;
 
 public class HelloWorldData {
     private HelloWorldExample.ExampleName name;
-    private io.p8e.proto.ContractScope.Scope scope;
+    private Scope scope;
 
     public HelloWorldData(
             @Fact(name = "name") HelloWorldExample.ExampleName name,
-            io.p8e.proto.ContractScope.Scope scope
+            Scope scope
     ) {
         this.name = name;
     }
@@ -18,7 +19,7 @@ public class HelloWorldData {
         return name;
     }
 
-    public io.p8e.proto.ContractScope.Scope getScope() {
+    public Scope getScope() {
         return scope;
     }
 }
