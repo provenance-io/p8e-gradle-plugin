@@ -1,3 +1,5 @@
+package io.p8e.examplejava;
+
 import arrow.core.Either;
 import io.p8e.ContractManager;
 import io.p8e.contracts.examplejava.ExampleContracts.HelloWorldJavaContract;
@@ -84,6 +86,11 @@ public class Runner {
 
             if(latchSuccess && success.get()) {
                 log.info("Contract completed successfully!");
+
+                // hydrate the saved data
+                HelloWorldData data = cm.hydrate(scopeUuid, HelloWorldData.class);
+
+                log.info("Hydrated data = " + data.getName().toString());
             } else if (!latchSuccess) {
                 log.error("Contract errored!");
             } else {
@@ -96,7 +103,13 @@ public class Runner {
             return null;
         });
 
-        Thread.sleep(2_500);
+        // allow final ACK to be sent to server
+        Thread.sleep(5_000);
+
         cm.close();
+
+        log.info("Connection manager closed!");
+        Thread.sleep(5_000);
+        java.lang.System.exit(0);
     }
 }
