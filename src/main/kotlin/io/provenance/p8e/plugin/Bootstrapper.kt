@@ -57,11 +57,11 @@ import io.provenance.scope.encryption.ecies.ECUtils
 import io.provenance.scope.encryption.model.DirectKeyRef
 import io.provenance.scope.encryption.proto.PK
 import io.provenance.scope.encryption.util.ByteUtil
+import io.provenance.scope.objectstore.client.ObjectHash
 import io.provenance.scope.sdk.Affiliate
 import io.provenance.scope.sdk.Client
 import io.provenance.scope.sdk.ClientConfig
 import io.provenance.scope.sdk.ContractSpecMapper
-import io.provenance.scope.sdk.ObjectHash
 import io.provenance.scope.sdk.SharedClient
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
@@ -207,11 +207,12 @@ internal class Bootstrapper(
 
                 osGrpcUrl = URI(location.osUrl!!),
                 osGrpcDeadlineMs = 60 * 1_000L,
+                mainNet = location.mainNet
             )
             val encryptionKeyPair = getKeyPair(location.encryptionPrivateKey!!)
             val signingKeyPair = getKeyPair(location.signingPrivateKey!!)
             val pbSigner = signingKeyPair.toSignerMeta()
-            val pbAddress = getAddress(signingKeyPair.public)
+            val pbAddress = getAddress(signingKeyPair.public, config.mainNet)
             val affiliate = Affiliate(
                 signingKeyRef = DirectKeyRef(signingKeyPair.public, signingKeyPair.private),
                 encryptionKeyRef = DirectKeyRef(encryptionKeyPair.public, encryptionKeyPair.private),
@@ -469,14 +470,14 @@ internal class Bootstrapper(
         val contentLength = jar.length()
 
         return client.inner.osClient
-            .putJar(FileInputStream(jar), client.affiliate, contentLength, location.audience.values.map { it.toPublicKey() }.toSet()).get()
+            .putJar(FileInputStream(jar), client.affiliate.signingKeyRef, client.affiliate.encryptionKeyRef, contentLength, location.audience.values.map { it.toPublicKey() }.toSet()).get()
             .also { project.logger.info("Saved jar ${jar.path} with hash ${it.value} size = $contentLength") }
     }
 
     fun storeObject(client: Client, spec: ContractSpec, location: P8eLocationExtension): ObjectHash {
         // TODO move to 16 bytes
         return client.inner.osClient
-            .putRecord(spec, client.affiliate, location.audience.values.map { it.toPublicKey() }.toSet()).get()
+            .putRecord(spec, client.affiliate.signingKeyRef, client.affiliate.encryptionKeyRef, location.audience.values.map { it.toPublicKey() }.toSet()).get()
             // TODO move to debug later
             // TODO find the name field
             .also { project.logger.info("Saved contract specification ${spec.definition.resourceLocation.classname} with hash ${it.value} size = ${spec.serializedSize}") }
@@ -668,11 +669,11 @@ fun BigInteger.getUnsignedBytes(): ByteArray {
     return bytes;
 }
 
-fun getAddress(publicKey: PublicKey): String {
+fun getAddress(publicKey: PublicKey, mainNet: Boolean): String {
     val bytes = (publicKey as BCECPublicKey).q.getEncoded(true)
+    val prefix = if (mainNet) "pb" else "tp"
 
-    // TODO get prefix from location config
-    return Hash.sha256hash160(bytes).toBech32Data("tp").address
+    return Hash.sha256hash160(bytes).toBech32Data(prefix).address
 }
 
 /** Cryptographic hash functions.  */
