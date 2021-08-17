@@ -58,6 +58,7 @@ import io.provenance.scope.encryption.model.DirectKeyRef
 import io.provenance.scope.encryption.proto.PK
 import io.provenance.scope.encryption.util.ByteUtil
 import io.provenance.scope.objectstore.client.ObjectHash
+import io.provenance.scope.objectstore.util.sha256LoBytes
 import io.provenance.scope.sdk.Affiliate
 import io.provenance.scope.sdk.Client
 import io.provenance.scope.sdk.ClientConfig
@@ -147,13 +148,7 @@ fun UUID.toByteArray(): ByteArray {
 
     return buffer.array()
 }
-fun ContractSpec.uuid(): UUID {
-    return Hashing.sha256().hashBytes(this.toByteArray())
-        .asBytes()
-        .slice(0..16)
-        .toByteArray()
-        .toUuid()
-}
+fun ContractSpec.uuid(): UUID = toByteArray().sha256LoBytes().toUuid()
 fun ObjectHash.toReference(): ProvenanceReference {
     return ProvenanceReference.newBuilder()
         .setHash(this.value)
