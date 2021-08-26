@@ -18,8 +18,6 @@ import com.fasterxml.jackson.databind.JsonDeserializer
 import com.fasterxml.jackson.databind.JsonNode
 import java.io.IOException
 
-import com.google.common.hash.Hashing
-import com.google.common.io.BaseEncoding
 import com.google.protobuf.Any
 import com.google.protobuf.ByteString
 import com.google.protobuf.Message
@@ -45,7 +43,6 @@ import io.provenance.metadata.v1.MsgWriteRecordSpecificationRequest
 import io.provenance.metadata.v1.MsgWriteScopeSpecificationRequest
 import io.provenance.metadata.v1.QueryGrpc
 import io.provenance.metadata.v1.RecordSpecification
-import io.provenance.metadata.v1.PartyType as ProvenancePartyType
 import io.provenance.metadata.v1.ScopeSpecification
 import io.provenance.metadata.v1.ScopeSpecificationRequest
 import io.provenance.scope.contract.annotations.ScopeSpecificationDefinition
@@ -58,7 +55,10 @@ import io.provenance.scope.encryption.model.DirectKeyRef
 import io.provenance.scope.encryption.proto.PK
 import io.provenance.scope.encryption.util.ByteUtil
 import io.provenance.scope.objectstore.client.ObjectHash
+import io.provenance.scope.objectstore.util.base64EncodeString
+import io.provenance.scope.objectstore.util.sha256
 import io.provenance.scope.objectstore.util.sha256LoBytes
+import io.provenance.scope.objectstore.util.toUuid
 import io.provenance.scope.sdk.Affiliate
 import io.provenance.scope.sdk.Client
 import io.provenance.scope.sdk.ClientConfig
@@ -110,45 +110,9 @@ fun Collection<Message>.toTxBody(): TxBody = TxBody.newBuilder()
     .build()
 fun Message.toAny(typeUrlPrefix: String = "") = Any.pack(this, typeUrlPrefix)
 
-// TODO do we want these in sdk?
-fun PartyType.toProv() = when (this) {
-    PartyType.SERVICER -> ProvenancePartyType.PARTY_TYPE_SERVICER
-    PartyType.ORIGINATOR -> ProvenancePartyType.PARTY_TYPE_ORIGINATOR
-    PartyType.OWNER -> ProvenancePartyType.PARTY_TYPE_OWNER
-    PartyType.AFFILIATE -> ProvenancePartyType.PARTY_TYPE_AFFILIATE
-    PartyType.CUSTODIAN -> ProvenancePartyType.PARTY_TYPE_CUSTODIAN
-    PartyType.INVESTOR -> ProvenancePartyType.PARTY_TYPE_INVESTOR
-    PartyType.OMNIBUS -> ProvenancePartyType.PARTY_TYPE_OMNIBUS
-    PartyType.PROVENANCE -> ProvenancePartyType.PARTY_TYPE_PROVENANCE
-    PartyType.NONE, PartyType.UNRECOGNIZED -> throw IllegalStateException("Invalid PartyType of ${this}.")
-}
-fun ByteString.base64Encode(): String {
-    return this.toByteArray().base64Encode()
-}
-fun ByteArray.base64Encode(): String {
-    return BaseEncoding.base64().encode(this)
-}
-// TODO add test to go to byte array and back to uuid
-fun ByteString.toUuid(): UUID {
-    return this.toByteArray().toUuid()
-}
-fun ByteArray.toUuid(): UUID {
-    val buffer = ByteBuffer.wrap(this)
-
-    val first = buffer.long
-    val second = buffer.long
-
-    return UUID(first, second)
-}
-fun UUID.toByteArray(): ByteArray {
-    val buffer = ByteBuffer.wrap(ByteArray(16))
-
-    buffer.putLong(this.leastSignificantBits)
-    buffer.putLong(this.mostSignificantBits)
-
-    return buffer.array()
-}
 fun ContractSpec.uuid(): UUID = toByteArray().sha256LoBytes().toUuid()
+fun ContractSpec.hashString(): String = toByteArray().sha256LoBytes().base64EncodeString()
+
 fun ObjectHash.toReference(): ProvenanceReference {
     return ProvenanceReference.newBuilder()
         .setHash(this.value)
@@ -243,8 +207,7 @@ internal class Bootstrapper(
             val scopeSpecificationNameToUuid = mutableMapOf<String, UUID>()
             val scopeSpecifications = scopes.map { clazz ->
                 val definition = clazz.annotations
-                    .filter { it is ScopeSpecificationDefinition }
-                    .map { it as ScopeSpecificationDefinition }
+                    .filterIsInstance<ScopeSpecificationDefinition>()
                     .first()
                 val id = MetadataAddress.forScopeSpecification(UUID.fromString(definition.uuid)).bytes
 
@@ -260,7 +223,7 @@ internal class Bootstrapper(
                         .build()
                     )
                     .addOwnerAddresses(pbAddress)
-                    .addAllPartiesInvolved(definition.partiesInvolved.map { it.toProv() })
+                    .addAllPartiesInvolvedValue(definition.partiesInvolved.map { it.valueDescriptor.number })
                     .build()
             }
             val newScopeSpecifications = scopeSpecifications.filter { spec ->
@@ -341,8 +304,8 @@ internal class Bootstrapper(
                         .build()
                     )
                     .addOwnerAddresses(pbAddress)
-                    .addAllPartiesInvolved(spec.partiesInvolvedList.map { p -> p.toProv() })
-                    .setHash(spec.uuid().toByteArray().base64Encode())
+                    .addAllPartiesInvolvedValue(spec.partiesInvolvedValueList)
+                    .setHash(spec.hashString())
                     .setClassName(spec.definition.resourceLocation.classname)
                     .build()
 
@@ -361,7 +324,7 @@ internal class Bootstrapper(
                         })
                         .setTypeName(functionSpec.outputSpec.spec.resourceLocation.classname)
                         .setResultType(DefinitionType.DEFINITION_TYPE_PROPOSED)
-                        .addAllResponsibleParties(listOf(functionSpec.invokerParty.toProv()))
+                        .addResponsiblePartiesValue(functionSpec.invokerPartyValue)
                         .build()
 
                     recordSpecifications.add(recordSpec)
@@ -416,29 +379,31 @@ internal class Bootstrapper(
             if (!tx.isEmpty()) {
                 val serviceClient = ServiceGrpc.newBlockingStub(provenanceChannel)
                 val authClient = cosmos.auth.v1beta1.QueryGrpc.newBlockingStub(provenanceChannel)
-                val txBody = tx.toTxBody()
-                val accountInfo = authClient.withDeadlineAfter(10, TimeUnit.SECONDS)
-                    .account(QueryOuterClass.QueryAccountRequest.newBuilder()
-                        .setAddress(pbAddress)
-                        .build()
-                    ).run { account.unpack(Auth.BaseAccount::class.java) }
-                val signedSimulateTx = signTx(location, txBody, accountInfo.accountNumber, accountInfo.sequence, pbSigner)
-                val estimate = serviceClient.withDeadlineAfter(10, TimeUnit.SECONDS)
-                    .simulate(SimulateRequest.newBuilder().setTx(signedSimulateTx).build())
-                    .let { GasEstimate(it.gasInfo.gasUsed) }
+                tx.forEach { message ->
+                    val txBody = listOf(message).toTxBody()
+                    val accountInfo = authClient.withDeadlineAfter(10, TimeUnit.SECONDS)
+                        .account(QueryOuterClass.QueryAccountRequest.newBuilder()
+                            .setAddress(pbAddress)
+                            .build()
+                        ).run { account.unpack(Auth.BaseAccount::class.java) }
+                    val signedSimulateTx = signTx(location, txBody, accountInfo.accountNumber, accountInfo.sequence, pbSigner)
+                    val estimate = serviceClient.withDeadlineAfter(10, TimeUnit.SECONDS)
+                        .simulate(SimulateRequest.newBuilder().setTx(signedSimulateTx).build())
+                        .let { GasEstimate(it.gasInfo.gasUsed) }
 
-                project.logger.info("signed tx = $signedSimulateTx")
+                    project.logger.info("signed tx = $signedSimulateTx")
 
-                val signedTx = signTx(location, txBody, accountInfo.accountNumber, accountInfo.sequence, pbSigner, gasEstimate = estimate)
-                val response = serviceClient.withDeadlineAfter(20, TimeUnit.SECONDS)
-                    .broadcastTx(BroadcastTxRequest.newBuilder()
-                        .setTxBytes(ByteString.copyFrom(signedTx.toByteArray()))
-                        .setMode(BroadcastMode.BROADCAST_MODE_BLOCK)
-                        .build()
-                    )
+                    val signedTx = signTx(location, txBody, accountInfo.accountNumber, accountInfo.sequence, pbSigner, gasEstimate = estimate)
+                    val response = serviceClient.withDeadlineAfter(20, TimeUnit.SECONDS)
+                        .broadcastTx(BroadcastTxRequest.newBuilder()
+                            .setTxBytes(ByteString.copyFrom(signedTx.toByteArray()))
+                            .setMode(BroadcastMode.BROADCAST_MODE_BLOCK)
+                            .build()
+                        )
 
-                project.logger.info("tx response = $response")
-                // TODO parse response and verify it was successful
+                    project.logger.info("tx response = $response")
+                    // TODO parse response and verify it was successful
+                }
             }
 
             provenanceChannel.shutdown()
@@ -510,28 +475,26 @@ internal class Bootstrapper(
     fun signTx(location: P8eLocationExtension, body: TxBody, accountNumber: Long, sequenceNumber: Long, signer: SignerMeta, gasEstimate: GasEstimate = GasEstimate(0)): Tx {
         val authInfo = AuthInfo.newBuilder()
             .setFee(Fee.newBuilder()
-                .addAllAmount(listOf(
-                    CoinOuterClass.Coin.newBuilder()
-                        .setDenom("nhash")
-                        .setAmount((gasEstimate.fees).toString())
-                        .build()
-                )).setGasLimit((gasEstimate.limit).toLong())
-            )
-            .addAllSignerInfos(listOf(
-                SignerInfo.newBuilder()
-                    .setPublicKey(
-                        Keys.PubKey.newBuilder()
-                            .setKey(ByteString.copyFrom(signer.compressedPublicKey))
-                            .build()
-                            .toAny()
-                    )
-                    .setModeInfo(ModeInfo.newBuilder()
-                        .setSingle(ModeInfo.Single.newBuilder().setMode(Signing.SignMode.SIGN_MODE_DIRECT).build())
-                        .build()
-                    )
-                    .setSequence(sequenceNumber)
+                .addAmount(CoinOuterClass.Coin.newBuilder()
+                    .setDenom("nhash")
+                    .setAmount((gasEstimate.fees).toString())
                     .build()
-            )).build()
+                ).setGasLimit((gasEstimate.limit).toLong())
+            )
+            .addSignerInfos(SignerInfo.newBuilder()
+                .setPublicKey(
+                    Keys.PubKey.newBuilder()
+                        .setKey(ByteString.copyFrom(signer.compressedPublicKey))
+                        .build()
+                        .toAny()
+                )
+                .setModeInfo(ModeInfo.newBuilder()
+                    .setSingle(ModeInfo.Single.newBuilder().setMode(Signing.SignMode.SIGN_MODE_DIRECT).build())
+                    .build()
+                )
+                .setSequence(sequenceNumber)
+                .build()
+            ).build()
 
         val signatures = SignDoc.newBuilder()
             .setBodyBytes(body.toByteString())
@@ -554,12 +517,10 @@ internal class Bootstrapper(
 typealias SignerFn = (ByteArray) -> List<StdSignature>
 object PbSigner {
     fun signerFor(keyPair: KeyPair): SignerFn = { bytes ->
-        bytes.let {
-            Hashing.sha256().hashBytes(it).asBytes()
-        }.let {
+        bytes.sha256().let {
             val privateKey = (keyPair.private as BCECPrivateKey).s
             StdSignature(
-                pub_key = StdPubKey("tendermint/PubKeySecp256k1", (keyPair.public as BCECPublicKey).q.getEncoded(true)) ,
+                pub_key = StdPubKey("tendermint/PubKeySecp256k1", (keyPair.public as BCECPublicKey).q.getEncoded(true)),
                 signature = EllipticCurveSigner().sign(it, privateKey, true).encodeAsBTC()
             )
         }.let {
