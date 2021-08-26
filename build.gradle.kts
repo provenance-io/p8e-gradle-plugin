@@ -48,7 +48,7 @@ dependencies {
 
     implementation("commons-io:commons-io:2.8.0")
     implementation("com.google.protobuf:protobuf-java:3.12.0")
-    implementation("org.bouncycastle:bcprov-jdk15on:1.68")
+    implementation("org.bouncycastle:bcprov-jdk15on:1.69")
 
     runtimeOnly("io.grpc", "grpc-netty-shaded", "1.39.0")
 
