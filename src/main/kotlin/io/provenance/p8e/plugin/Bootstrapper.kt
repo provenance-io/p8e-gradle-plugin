@@ -132,6 +132,14 @@ internal class Bootstrapper(
             require(!location.osUrl.isNullOrBlank()) { "object-store url is required for location $name" }
             require(!location.provenanceUrl.isNullOrBlank()) { "provenance url is required for location $name" }
             require(!location.chainId.isNullOrBlank()) { "chainId is required for location $name" }
+            require(!location.txBatchSize.isNullOrBlank()) { "txBatchSize is required for location $name" }
+
+            try {
+                location.txBatchSize!!.toInt()
+            } catch (e: Exception) {
+                throw IllegalStateException("txBatchSize must be a valid int32 for location $name")
+
+            }
         }
 
         // TODO: add additional validation checks that configuration is good enough to publish
@@ -389,7 +397,7 @@ internal class Bootstrapper(
                     val serviceClient = ServiceGrpc.newBlockingStub(provenanceChannel)
                     val authClient = cosmos.auth.v1beta1.QueryGrpc.newBlockingStub(provenanceChannel)
 
-                    tx.chunked(25).forEach { batch ->
+                    tx.chunked(location.txBatchSize!!.toInt()).forEach { batch ->
                         project.logger.debug("tx batch: $batch")
 
                         val txBody = batch.toTxBody()

@@ -88,6 +88,7 @@ p8e {
             chainId: System.getenv('CHAIN_ID'),
             encryptionPrivateKey: System.getenv('ENCRYPTION_PRIVATE_KEY'),
             signingPrivateKey: System.getenv('SIGNING_PRIVATE_KEY'),
+            txBatchSize: "10",
 
             audience: [
                 local1: new io.provenance.p8e.plugin.P8ePartyExtension(
