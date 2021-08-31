@@ -23,8 +23,7 @@ plugins {
 sourceSets.main.java.srcDirs += 'build/generated/source/proto/main/java'
 
 dependencies {
-    implementation("io.provenance.p8e:p8e-contract-base:0.7.3")
-    // implementation("io.provenance.p8e:p8e-contract-base:1.0-SNAPSHOT")
+    implementation("io.provenance.scope:contract-base:0.2.0")
 
     compile "com.google.protobuf:protobuf-java:$protobuf_version"
     compile "com.google.protobuf:protobuf-java-util:$protobuf_version"

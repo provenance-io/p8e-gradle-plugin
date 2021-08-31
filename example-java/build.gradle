@@ -12,8 +12,8 @@ buildscript {
 }
 
 plugins {
-    id "io.provenance.p8e.p8e-publish" version "0.4.1"
-    // id "io.provenance.p8e.p8e-publish" version "1.0-SNAPSHOT"
+    // id "io.provenance.p8e.p8e-publish" version "0.4.1"
+    id "io.provenance.p8e.p8e-publish" version "1.0-SNAPSHOT"
 }
 
 allprojects {
@@ -43,8 +43,11 @@ p8e {
     // specifies all of the p8e locations that this plugin will bootstrap to.
     locations = [
         local: new io.provenance.p8e.plugin.P8eLocationExtension(
-            url: System.getenv('API_URL'),
-            privateKey: System.getenv('PRIVATE_KEY'),
+            osUrl: System.getenv('OS_GRPC_URL'),
+            provenanceUrl: System.getenv('PROVENANCE_GRPC_URL'),
+            encryptionPrivateKey: System.getenv('ENCRYPTION_PRIVATE_KEY'),
+            signingPrivateKey: System.getenv('SIGNING_PRIVATE_KEY'),
+            chainId: System.getenv('CHAIN_ID'),
 
             audience: [
                 local1: new io.provenance.p8e.plugin.P8ePartyExtension(

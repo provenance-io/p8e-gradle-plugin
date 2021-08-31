@@ -39,7 +39,7 @@ dependencies {
 
     implementation("org.reflections:reflections:0.9.10")
 
-    implementation("io.provenance.scope:sdk:0.1.0")
+    implementation("io.provenance.scope:sdk:0.2.0")
     // implementation("io.provenance.scope:sdk:1.0-SNAPSHOT")
     implementation("io.provenance.protobuf:pb-proto-java:1.5.0")
 
