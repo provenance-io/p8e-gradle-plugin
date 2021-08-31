@@ -13,8 +13,8 @@ buildscript {
 }
 
 plugins {
-    // id "io.provenance.p8e.p8e-publish" version "0.4.1"
-    id "io.provenance.p8e.p8e-publish" version "1.0-SNAPSHOT"
+    id "io.provenance.p8e.p8e-publish" version "0.5.0-p8e-scope-sdk"
+    // id "io.provenance.p8e.p8e-publish" version "1.0-SNAPSHOT"
 }
 
 allprojects {
