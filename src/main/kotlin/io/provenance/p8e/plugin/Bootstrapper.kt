@@ -379,8 +379,8 @@ internal class Bootstrapper(
             if (!tx.isEmpty()) {
                 val serviceClient = ServiceGrpc.newBlockingStub(provenanceChannel)
                 val authClient = cosmos.auth.v1beta1.QueryGrpc.newBlockingStub(provenanceChannel)
-                tx.forEach { message ->
-                    val txBody = listOf(message).toTxBody()
+                tx.chunked(25).forEach { batch ->
+                    val txBody = batch.toTxBody()
                     val accountInfo = authClient.withDeadlineAfter(10, TimeUnit.SECONDS)
                         .account(QueryOuterClass.QueryAccountRequest.newBuilder()
                             .setAddress(pbAddress)
