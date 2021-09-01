@@ -447,11 +447,10 @@ internal class Bootstrapper(
                     project.logger.warn("Could not shutdown ManagedChannel for ${location.provenanceUrl} cleanly!")
                 }
 
-                // TODO add back when this exists
-                // sdk.inner.close()
-                // if (!sdk.inner.awaitTermination(10, TimeUnit.SECONDS)) {
-                //     project.logger.warn("Could not shutdown ManagedChannel for ${location.provenanceUrl} cleanly!")
-                // }
+                sdk.inner.close()
+                if (!sdk.inner.awaitTermination(10, TimeUnit.SECONDS)) {
+                    project.logger.warn("Could not shutdown ManagedChannel for ${location.provenanceUrl} cleanly!")
+                }
             }
 
         }
