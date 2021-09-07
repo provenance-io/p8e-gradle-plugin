@@ -39,7 +39,7 @@ dependencies {
 
     implementation("org.reflections:reflections:0.9.10")
 
-    implementation("io.provenance.scope:sdk:1.0-SNAPSHOT")
+    implementation("io.provenance.scope:sdk:0.2.0")
     // implementation("io.provenance.scope:sdk:1.0-SNAPSHOT")
     implementation("io.provenance.protobuf:pb-proto-java:1.5.0")
 
@@ -48,7 +48,7 @@ dependencies {
 
     implementation("commons-io:commons-io:2.8.0")
     implementation("com.google.protobuf:protobuf-java:3.12.0")
-    implementation("org.bouncycastle:bcprov-jdk15on:1.68")
+    implementation("org.bouncycastle:bcprov-jdk15on:1.69")
 
     runtimeOnly("io.grpc", "grpc-netty-shaded", "1.39.0")
 

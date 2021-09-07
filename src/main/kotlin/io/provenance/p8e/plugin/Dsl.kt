@@ -14,6 +14,7 @@ open class P8eLocationExtension {
     var audience: Map<String, P8ePartyExtension> = emptyMap()
     var chainId: String? = ""
     var mainNet: Boolean = chainId == "pio-mainnet-1"
+    var txBatchSize: String? = ""
 }
 
 open class P8eExtension {
