@@ -8,13 +8,11 @@ buildscript {
 
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.4.32"
-        classpath 'com.bmuschko:gradle-nexus-plugin:2.3.1'
     }
 }
 
 plugins {
-    id "io.provenance.p8e.p8e-publish" version "0.5.2-p8e-scope-sdk"
-    // id "io.provenance.p8e.p8e-publish" version "1.0-SNAPSHOT"
+    id "io.provenance.p8e.p8e-publish" version "1.0-SNAPSHOT"
 }
 
 allprojects {

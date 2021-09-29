@@ -71,6 +71,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.jce.spec.ECPrivateKeySpec
 import org.bouncycastle.jce.spec.ECPublicKeySpec
 import org.bouncycastle.util.encoders.Hex
+import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.kethereum.crypto.api.ec.ECDSASignature
 import java.io.ByteArrayOutputStream
@@ -138,7 +139,12 @@ internal class Bootstrapper(
                 location.txBatchSize!!.toInt()
             } catch (e: Exception) {
                 throw IllegalStateException("txBatchSize must be a valid int32 for location $name")
+            }
 
+            try {
+                location.txFeeAdjustment.toDouble()
+            } catch (e: Exception) {
+                throw IllegalStateException("txFeeAdjustment must be a valid double for location $name")
             }
         }
 
@@ -160,6 +166,8 @@ internal class Bootstrapper(
         val contracts = findContracts(contractClassLoader)
         val scopes = findScopes(contractClassLoader)
         val protos = findProtos(contractClassLoader)
+
+        var errored = false
 
         extension.locations.forEach { name, location ->
             project.logger.info("Publishing contracts - location: $name object-store url: ${location.osUrl} provenance url: ${location.provenanceUrl}")
@@ -209,7 +217,6 @@ internal class Bootstrapper(
                         hashes[protoKey] = it.value
                     }
 
-
                 val existingScopeSpecifications = mutableListOf<ScopeSpecification>()
                 val scopeSpecificationNameToUuid = mutableMapOf<String, UUID>()
                 val scopeSpecifications = scopes.map { clazz ->
@@ -255,9 +262,9 @@ internal class Bootstrapper(
                         existingScopeSpecifications.add(existingSpec.scopeSpecification.specification)
                     }
 
-                    isNew || (isUpdated && spec.ownerAddressesList == existingSpec.scopeSpecification.specification.ownerAddressesList)
+                    isNew // || (isUpdated && spec.ownerAddressesList == existingSpec.scopeSpecification.specification.ownerAddressesList)
                 }.also { specs ->
-                    project.logger.info("Adding ${specs.size} scope specification(s) to batch")
+                    project.logger.info("Adding ${specs.size} scope specification(s) to batch for provenance")
 
                     if (specs.isNotEmpty()) {
                         tx.addAll(specs.map { spec ->
@@ -351,7 +358,7 @@ internal class Bootstrapper(
 
                     Pair(contractSpecification, recordSpecifications)
                 }.also { specs ->
-                    project.logger.info("Adding ${specs.size} contract specification(s) to batch")
+                    project.logger.info("Adding ${specs.size} contract specification(s) to batch for provenance")
 
                     specs.map { (contractSpecification, recordSpecifications) ->
                         tx.add(
@@ -374,28 +381,56 @@ internal class Bootstrapper(
                 }
 
                 // add all new scope spec to contract spec mappings
-                newContractSpecifications.forEach { (spec, _) ->
+                newContractSpecifications.flatMap { (spec, _) ->
                     val address = MetadataAddress.fromBytes(spec.specificationId.toByteArray())
 
-                    contractSpecificationUuidToScopeNames.getValue(address.getPrimaryUuid()).forEach { scopeSpecName ->
+                    contractSpecificationUuidToScopeNames.getValue(address.getPrimaryUuid()).map { scopeSpecName ->
                         val uuid = scopeSpecificationNameToUuid.getValue(scopeSpecName)
                         val scopeSpecificationAddress = MetadataAddress.forScopeSpecification(uuid)
 
-                        tx.add(
+                        MsgAddContractSpecToScopeSpecRequest.newBuilder()
+                            .setScopeSpecificationId(ByteString.copyFrom(scopeSpecificationAddress.bytes))
+                            .setContractSpecificationId(spec.specificationId)
+                            .addSigners(pbAddress)
+                            .build()
+                    }
+                }.also {
+                    project.logger.info("Adding ${it.size} new contract specification/scope specification mapping(s) to batch for provenance")
+
+                    tx.addAll(it)
+                }
+
+                // add all existing contract specifications that weren't previously attached to a scope specification,
+                // or just had a new scope specification added
+                existingContractSpecifications.flatMap { spec ->
+                    val address = MetadataAddress.fromBytes(spec.specificationId.toByteArray())
+
+                    contractSpecificationUuidToScopeNames.getValue(address.getPrimaryUuid()).map { scopeSpecName ->
+                        val uuid = scopeSpecificationNameToUuid.getValue(scopeSpecName)
+                        val scopeSpecificationId = ByteString.copyFrom(MetadataAddress.forScopeSpecification(uuid).bytes)
+                        val scopeSpec = existingScopeSpecifications.find { it.specificationId == scopeSpecificationId }
+
+                        if (!scopeSpec?.contractSpecIdsList.orEmpty().contains(spec.specificationId)) {
                             MsgAddContractSpecToScopeSpecRequest.newBuilder()
-                                .setScopeSpecificationId(ByteString.copyFrom(scopeSpecificationAddress.bytes))
+                                .setScopeSpecificationId(scopeSpecificationId)
                                 .setContractSpecificationId(spec.specificationId)
                                 .addSigners(pbAddress)
                                 .build()
-                        )
-                    }
-                }
+                        } else {
+                            null
+                        }
+                    }.filterNotNull()
+                }.also {
+                    project.logger.info("Adding ${it.size} existing contract specification/scope specification mapping(s) to batch for provenance")
 
-                // TODO handle adding ContractSpecToScopeSpec's for existing ContractSpecifications that add a new ScopeSpecification
+                    tx.addAll(it)
+                }
 
                 if (tx.isNotEmpty()) {
                     val serviceClient = ServiceGrpc.newBlockingStub(provenanceChannel)
                     val authClient = cosmos.auth.v1beta1.QueryGrpc.newBlockingStub(provenanceChannel)
+
+                    project.logger.info("Sending ${tx.size} total messages to provenance.")
 
                     tx.chunked(location.txBatchSize!!.toInt()).forEach { batch ->
                         project.logger.debug("tx batch: $batch")
@@ -421,7 +456,7 @@ internal class Bootstrapper(
                             accountInfo.accountNumber,
                             accountInfo.sequence,
                             pbSigner,
-                            gasEstimate = estimate
+                            gasEstimate = estimate.copy(feeAdjustment = location.txFeeAdjustment.toDouble())
                         )
                         val response = serviceClient.withDeadlineAfter(20, TimeUnit.SECONDS)
                             .broadcastTx(
@@ -431,16 +466,19 @@ internal class Bootstrapper(
                                     .build()
                             )
 
+                        project.logger.info("sent tx = ${response.txResponse.txhash}")
                         project.logger.trace("tx response = $response")
 
                         if (response.txResponse.code != 0) {
                             project.logger.warn("Could not persist batch: $response")
+                            project.logger.info("sent messages = $batch")
                             throw Exception("Received non zero response from Provenance")
                         }
                     }
                 }
             } catch (e: Exception) {
                 project.logger.error("", e)
+                errored = true
             } finally {
                 provenanceChannel.shutdown()
                 if (!provenanceChannel.awaitTermination(10, TimeUnit.SECONDS)) {
@@ -452,10 +490,11 @@ internal class Bootstrapper(
                     project.logger.warn("Could not shutdown ManagedChannel for ${location.provenanceUrl} cleanly!")
                 }
             }
-
         }
 
-        if(hashes.isEmpty()) {
+        if (errored) {
+            throw GradleException("Bootstrap FAILED!")
+        } else if(hashes.isEmpty()) {
             project.logger.warn("No p8e locations were detected!")
         } else {
             project.logger.info("Writing services providers")

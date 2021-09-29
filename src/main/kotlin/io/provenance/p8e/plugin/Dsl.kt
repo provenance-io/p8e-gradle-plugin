@@ -15,6 +15,7 @@ open class P8eLocationExtension {
     var chainId: String? = ""
     var mainNet: Boolean = chainId == "pio-mainnet-1"
     var txBatchSize: String? = ""
+    var txFeeAdjustment: String = "1.25"
 }
 
 open class P8eExtension {

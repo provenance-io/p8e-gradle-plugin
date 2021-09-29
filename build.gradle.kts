@@ -8,11 +8,10 @@ version = (project.property("version") as String?)
     ?: "1.0-SNAPSHOT"
 
 plugins {
-    id("com.bmuschko.nexus") version "2.3.1"
     id("com.gradle.plugin-publish") version "0.13.0"
     `jacoco`
     `java-gradle-plugin`
-    kotlin("jvm") version "1.4.32"
+    kotlin("jvm") version "1.5.21"
     `maven-publish`
 }
 
@@ -34,8 +33,8 @@ configurations {
 }
 
 dependencies {
-    implementation(kotlin("stdlib", "1.4.32"))
-    implementation(kotlin("reflect", "1.4.32"))
+    implementation(kotlin("stdlib", "1.5.21"))
+    implementation(kotlin("reflect", "1.5.21"))
 
     implementation("org.reflections:reflections:0.9.10")
 
