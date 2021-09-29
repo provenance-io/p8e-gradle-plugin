@@ -21,6 +21,7 @@ p8e gradle plugin allows for publishing p8e Contracts against a [p8e](https://gi
 [loc-badge]: https://tokei.rs/b1/github/provenance-io/p8e-gradle-plugin
 [loc-report]: https://github.com/provenance-io/p8e-gradle-plugin
 
+NOTE: Versions prior to `0.5.0` are meant to bootstrap contracts with the legacy P8e Execution Environment.
 
 WARNING: Versions prior to `1.0.0` should be considered unstable and API changes expected.
 
