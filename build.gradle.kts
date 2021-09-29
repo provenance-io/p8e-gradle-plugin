@@ -103,7 +103,7 @@ tasks.register<Test>("integrationTest") {
 }
 
 jacoco {
-    toolVersion = "0.8.6"
+    toolVersion = "0.8.7"
 }
 
 tasks.jacocoTestReport {
