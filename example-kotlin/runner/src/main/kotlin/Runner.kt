@@ -1,4 +1,3 @@
-import io.p8e.annotations.Fact
 import io.p8e.ContractManager
 import io.p8e.contracts.examplekotlin.HelloWorldContract
 import io.p8e.exception.message
@@ -9,11 +8,6 @@ import io.provenance.p8e.shared.extension.logger
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
-
-data class HelloWorldData(
-    @Fact("name")
-    val name: HelloWorldExample.ExampleName,
-)
 
 fun main() {
     val log = logger()
@@ -75,11 +69,6 @@ fun main() {
 
         if (latchSuccess && success) {
             log.info("Contract completed successfully!")
-
-            // hydrate the saved data
-            val data = cm.hydrate(scopeUuid, HelloWorldData::class.java)
-
-            log.info("Hydrated data = $data")
         } else if (latchSuccess) {
             log.error("Contract errored!")
         } else {
@@ -90,11 +79,7 @@ fun main() {
     }
 
     // allow final ACK to be sent to server
-    Thread.sleep(5_000)
+    Thread.sleep(2_500)
 
     cm.close()
-
-    log.info("Connection manager closed!")
-    Thread.sleep(5_000)
-    java.lang.System.exit(0)
 }

@@ -1,5 +1,7 @@
 package io.provenance.p8e.plugin
 
+import io.provenance.scope.contract.spec.P8eContract
+import io.provenance.scope.contract.spec.P8eScopeSpecification
 import org.gradle.api.Project
 import org.gradle.jvm.tasks.Jar
 import org.reflections.Reflections
@@ -21,11 +23,11 @@ fun getJar(project: Project, taskName: String = "jar"): File {
         ?: throw IllegalStateException("task :$taskName in ${project.name} could not be found")
 }
 
-fun findScopes(classLoader: ClassLoader): Set<Class<out io.p8e.spec.P8eScopeSpecification>> =
-    findClasses(io.p8e.spec.P8eScopeSpecification::class.java, classLoader)
+fun findScopes(classLoader: ClassLoader): Set<Class<out P8eScopeSpecification>> =
+    findClasses(P8eScopeSpecification::class.java, classLoader)
 
-fun findContracts(classLoader: ClassLoader): Set<Class<out io.p8e.spec.P8eContract>> =
-    findClasses(io.p8e.spec.P8eContract::class.java, classLoader)
+fun findContracts(classLoader: ClassLoader): Set<Class<out P8eContract>> =
+    findClasses(P8eContract::class.java, classLoader)
 
 fun findProtos(classLoader: ClassLoader): Set<Class<out com.google.protobuf.Message>> =
     findClasses(com.google.protobuf.Message::class.java, classLoader)

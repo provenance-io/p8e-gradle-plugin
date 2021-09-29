@@ -8,11 +8,10 @@ version = (project.property("version") as String?)
     ?: "1.0-SNAPSHOT"
 
 plugins {
-    id("com.bmuschko.nexus") version "2.3.1"
     id("com.gradle.plugin-publish") version "0.13.0"
     `jacoco`
     `java-gradle-plugin`
-    kotlin("jvm") version "1.4.32"
+    kotlin("jvm") version "1.5.21"
     `maven-publish`
 }
 
@@ -34,20 +33,36 @@ configurations {
 }
 
 dependencies {
-    implementation(kotlin("stdlib", "1.4.32"))
-    implementation(kotlin("reflect", "1.4.32"))
+    implementation(kotlin("stdlib", "1.5.21"))
+    implementation(kotlin("reflect", "1.5.21"))
 
     implementation("org.reflections:reflections:0.9.10")
 
-    implementation("io.provenance.p8e:p8e-sdk:0.7.3")
-    // implementation("io.provenance.p8e:p8e-sdk:1.0-SNAPSHOT")
+    implementation("io.provenance.scope:sdk:0.2.0")
+    // implementation("io.provenance.scope:sdk:1.0-SNAPSHOT")
+    implementation("io.provenance.protobuf:pb-proto-java:1.5.0")
+
+    implementation("io.grpc:grpc-protobuf:1.39.0")
+    implementation("io.grpc", "grpc-stub", "1.39.0")
 
     implementation("commons-io:commons-io:2.8.0")
     implementation("com.google.protobuf:protobuf-java:3.12.0")
-    implementation("org.bouncycastle:bcprov-jdk15on:1.68")
+    implementation("org.bouncycastle:bcprov-jdk15on:1.69")
+
+    runtimeOnly("io.grpc", "grpc-netty-shaded", "1.39.0")
 
     // third party plugins that this plugin will apply
     implementation("com.github.jengelman.gradle.plugins:shadow:6.1.0")
+
+    // added for copied StdSignature functionality
+    implementation("com.github.komputing.kethereum:crypto:0.83.4")
+    implementation("com.github.komputing.kethereum:crypto_api:0.83.4")
+    implementation("com.github.komputing.kethereum:crypto_impl_bouncycastle:0.83.4")
+    implementation("com.fasterxml.jackson.core:jackson-core:2.12.2")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.12.2")
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.12.2")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.12.2")
+    implementation("com.fasterxml.jackson.core:jackson-annotations:2.12.2")
 
     testImplementation("io.kotest:kotest-runner-junit5:4.4.+")
     "integrationTestImplementation"("io.kotest:kotest-runner-junit5:4.4.+")
@@ -88,7 +103,7 @@ tasks.register<Test>("integrationTest") {
 }
 
 jacoco {
-    toolVersion = "0.8.6"
+    toolVersion = "0.8.7"
 }
 
 tasks.jacocoTestReport {

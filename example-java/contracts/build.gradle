@@ -13,8 +13,7 @@ plugins {
 dependencies {
     api project(':protos')
 
-    implementation("io.provenance.p8e:p8e-contract-base:0.7.3")
-    // implementation("io.provenance.p8e:p8e-contract-base:1.0-SNAPSHOT")
+    implementation("io.provenance.scope:contract-base:0.2.0")
 }
 
 publishing {

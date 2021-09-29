@@ -20,5 +20,5 @@ dependencies{
 }
 
 application {
-    mainClassName = 'io.p8e.examplejava.Runner'
+    mainClassName = 'Runner'
 }
