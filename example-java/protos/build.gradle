@@ -5,7 +5,6 @@ buildscript {
 
     repositories {
         mavenLocal()
-        jcenter()
         mavenCentral()
     }
 
@@ -23,7 +22,7 @@ plugins {
 sourceSets.main.java.srcDirs += 'build/generated/source/proto/main/java'
 
 dependencies {
-    implementation("io.provenance.scope:contract-base:0.2.0")
+    implementation("io.provenance.scope:contract-base:0.4.0")
 
     compile "com.google.protobuf:protobuf-java:$protobuf_version"
     compile "com.google.protobuf:protobuf-java-util:$protobuf_version"

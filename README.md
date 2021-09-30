@@ -57,9 +57,6 @@ p8eJar - Builds jars for projects specified by "contractProject" and "protoProje
 
 ## Usage
 
-Two simple execution examples exist in the `example-java` and `example-kotlin` directories. See their
-respective README files for running instructions.
-
 Below is a sample gradle block written in `groovy`.
 
 ```groovy

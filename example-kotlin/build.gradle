@@ -1,7 +1,6 @@
 buildscript {
     repositories {
         mavenLocal()
-        jcenter()
         mavenCentral()
         maven { url 'https://javadoc.jitpack.io' }
     }
@@ -21,7 +20,6 @@ allprojects {
 
     repositories {
         mavenLocal()
-        jcenter()
         mavenCentral()
         maven { url 'https://javadoc.jitpack.io' }
     }
