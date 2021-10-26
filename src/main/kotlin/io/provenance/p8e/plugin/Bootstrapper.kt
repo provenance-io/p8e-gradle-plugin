@@ -88,10 +88,10 @@ internal class Bootstrapper(
             require(!location.osUrl.isNullOrBlank()) { "object-store url is required for location $name" }
             require(!location.provenanceUrl.isNullOrBlank()) { "provenance url is required for location $name" }
             require(!location.chainId.isNullOrBlank()) { "chainId is required for location $name" }
-            require(!location.txBatchSize.isNullOrBlank()) { "txBatchSize is required for location $name" }
+            require(location.txBatchSize.isNotBlank()) { "txBatchSize is required for location $name" }
 
             try {
-                location.txBatchSize!!.toInt()
+                location.txBatchSize.toInt()
             } catch (e: Exception) {
                 throw IllegalStateException("txBatchSize must be a valid int32 for location $name")
             }
@@ -219,7 +219,7 @@ internal class Bootstrapper(
                                 .addSigners(pbAddress)
                                 .setSpecification(spec)
                                 .build()
-                        }.chunked(location.txBatchSize!!.toInt()).forEach { batch ->
+                        }.chunked(location.txBatchSize.toInt()).forEach { batch ->
                             try {
                                 client.writeTx(pbAddress, pbSigner, batch.toTxBody())
                             } catch (e: Exception) {
@@ -332,7 +332,7 @@ internal class Bootstrapper(
                         })
                     }
 
-                    messages.chunked(location.txBatchSize!!.toInt()).forEach { batch ->
+                    messages.chunked(location.txBatchSize.toInt()).forEach { batch ->
                         try {
                             client.writeTx(pbAddress, pbSigner, batch.toTxBody())
                         } catch (e: Exception) {
@@ -369,7 +369,7 @@ internal class Bootstrapper(
                 }.also { contractSpecToScopeSpecMessages ->
                     project.logger.info("Adding ${contractSpecToScopeSpecMessages.size} contract specification(s) to provenance for existing scope specification id(s)")
 
-                    contractSpecToScopeSpecMessages.chunked(location.txBatchSize!!.toInt()).forEach { batch ->
+                    contractSpecToScopeSpecMessages.chunked(location.txBatchSize.toInt()).forEach { batch ->
                         try {
                             client.writeTx(pbAddress, pbSigner, batch.toTxBody())
                         } catch (e: Exception) {
