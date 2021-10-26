@@ -8,6 +8,7 @@ import io.provenance.metadata.v1.ContractSpecificationRequest
 import io.provenance.metadata.v1.DefinitionType
 import io.provenance.metadata.v1.Description
 import io.provenance.metadata.v1.InputSpecification
+import io.provenance.metadata.v1.MsgAddContractSpecToScopeSpecRequest
 import io.provenance.metadata.v1.MsgWriteContractSpecificationRequest
 import io.provenance.metadata.v1.MsgWriteRecordSpecificationRequest
 import io.provenance.metadata.v1.MsgWriteScopeSpecificationRequest
@@ -342,7 +343,7 @@ internal class Bootstrapper(
                 }
 
                 // write contract specification ids to scope specifications they are missing from
-                scopes.mapNotNull { clazz ->
+                scopes.flatMap { clazz ->
                     val definition = clazz.annotations
                         .filterIsInstance<ScopeSpecificationDefinition>()
                         .first()
@@ -355,25 +356,20 @@ internal class Bootstrapper(
                             .setSpecificationId(definition.uuid)
                             .build()
                     )
-                    val newContractSpecIds = (response.scopeSpecification.specification.contractSpecIdsList + desiredContractSpecIds).toSet()
+                    val existingContractSpecIdsSet = response.scopeSpecification.specification.contractSpecIdsList.toSet()
 
-                    if (response.scopeSpecification.specification.contractSpecIdsList.size != newContractSpecIds.size) {
-                        val spec = response.scopeSpecification.specification.toBuilder()
-                            .clearContractSpecIds()
-                            .addAllContractSpecIds(newContractSpecIds)
-                            .build()
+                    desiredContractSpecIds.filterNot(existingContractSpecIdsSet::contains)
+                        .map { contractSpecId ->
+                            MsgAddContractSpecToScopeSpecRequest.newBuilder()
+                                .setScopeSpecificationId(response.scopeSpecification.specification.specificationId)
+                                .setContractSpecificationId(contractSpecId)
+                                .addSigners(pbAddress)
+                                .build()
+                        }
+                }.also { contractSpecToScopeSpecMessages ->
+                    project.logger.info("Adding ${contractSpecToScopeSpecMessages.size} contract specification(s) to provenance for existing scope specification id(s)")
 
-                        MsgWriteScopeSpecificationRequest.newBuilder()
-                            .addSigners(pbAddress)
-                            .setSpecification(spec)
-                            .build()
-                    } else {
-                        null
-                    }
-                }.also { scopeSpecifications ->
-                    project.logger.info("Updating ${scopeSpecifications.size} scope specification(s) to provenance for additional contract specification id(s)")
-
-                    scopeSpecifications.chunked(location.txBatchSize!!.toInt()).forEach { batch ->
+                    contractSpecToScopeSpecMessages.chunked(location.txBatchSize!!.toInt()).forEach { batch ->
                         try {
                             client.writeTx(pbAddress, pbSigner, batch.toTxBody())
                         } catch (e: Exception) {
