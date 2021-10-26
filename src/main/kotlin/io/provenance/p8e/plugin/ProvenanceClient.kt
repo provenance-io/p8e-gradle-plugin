@@ -45,18 +45,14 @@ import java.security.KeyPair
 import java.util.concurrent.TimeUnit
 import kotlin.math.ceil
 
-data class GasEstimate(val estimate: Long, val feeAdjustment: Double? = DEFAULT_FEE_ADJUSTMENT) {
+data class GasEstimate(val estimate: Long, val feeAdjustment: Double = DEFAULT_FEE_ADJUSTMENT) {
     companion object {
         private const val DEFAULT_FEE_ADJUSTMENT = 1.25
         private const val DEFAULT_GAS_PRICE = 1905.00
     }
 
-    private val adjustment = feeAdjustment ?: DEFAULT_FEE_ADJUSTMENT
-
-    val limit
-        get() = ceil(estimate * adjustment).toInt()
-    val fees
-        get() = ceil(limit * DEFAULT_GAS_PRICE).toInt()
+    fun limit() = ceil(estimate * feeAdjustment).toLong()
+    fun fees() = ceil(estimate * feeAdjustment * DEFAULT_GAS_PRICE).toLong()
 }
 
 fun Collection<Message>.toTxBody(): TxBody = TxBody.newBuilder()
@@ -129,9 +125,9 @@ class ProvenanceClient(channel: ManagedChannel, val logger: Logger, val location
                 .addAmount(
                     CoinOuterClass.Coin.newBuilder()
                     .setDenom("nhash")
-                    .setAmount((gasEstimate.fees).toString())
+                    .setAmount(gasEstimate.fees().toString())
                     .build()
-                ).setGasLimit((gasEstimate.limit).toLong())
+                ).setGasLimit(gasEstimate.limit())
             )
             .addSignerInfos(
                 SignerInfo.newBuilder()
