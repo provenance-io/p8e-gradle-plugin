@@ -80,6 +80,8 @@ object ServiceProvider {
             .writeText(contractHashServiceContent)
     }
 
+    private fun Set<Class<out P8eContract>>.withInterfaces() = this + this.flatMap { it.interfaces.toList() }.toSet()
+
     fun getContractHashContent(
         projectPaths: ProjectPaths,
         extension: P8eExtension,
@@ -95,7 +97,7 @@ import io.provenance.scope.contract.contracts.ContractHash
 class ContractHash$uid : ContractHash {
 
     private val classes = ${
-                contracts.map { it.name.replace("\$", "\\$") }
+                contracts.withInterfaces().map { it.name.replace("\$", "\\$") }
                     .map { "\"$it\" to true" }
                     .joinToString(separator = ", ", prefix = "mapOf(", postfix = ")")
             }
@@ -125,7 +127,7 @@ public class ContractHash$uid implements ContractHash {
 
     private final Map<String, Boolean> classes = new HashMap<String, Boolean>() {{
         ${
-            contracts.map { it.name }
+            contracts.withInterfaces().map { it.name }
                 .map { "put(\"$it\", true);" }
                 .joinToString(separator = "\n")
         }
