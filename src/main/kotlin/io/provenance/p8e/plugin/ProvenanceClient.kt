@@ -16,6 +16,7 @@ import cosmos.base.v1beta1.CoinOuterClass
 import cosmos.crypto.secp256k1.Keys
 import cosmos.tx.signing.v1beta1.Signing
 import cosmos.tx.v1beta1.ServiceGrpc
+import cosmos.tx.v1beta1.ServiceOuterClass
 import cosmos.tx.v1beta1.ServiceOuterClass.BroadcastMode
 import cosmos.tx.v1beta1.ServiceOuterClass.BroadcastTxRequest
 import cosmos.tx.v1beta1.ServiceOuterClass.SimulateRequest
@@ -27,12 +28,14 @@ import cosmos.tx.v1beta1.TxOuterClass.SignerInfo
 import cosmos.tx.v1beta1.TxOuterClass.Tx
 import cosmos.tx.v1beta1.TxOuterClass.TxBody
 import io.grpc.ManagedChannel
+import io.grpc.StatusRuntimeException
 import io.provenance.metadata.v1.ContractSpecificationRequest
 import io.provenance.metadata.v1.ContractSpecificationResponse
 import io.provenance.metadata.v1.QueryGrpc
 import io.provenance.metadata.v1.ScopeSpecificationRequest
 import io.provenance.metadata.v1.ScopeSpecificationResponse
 import io.provenance.scope.objectstore.util.sha256
+import io.provenance.scope.util.toHexString
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
 import org.kethereum.crypto.CURVE
@@ -42,6 +45,7 @@ import org.slf4j.Logger
 import java.io.IOException
 import java.math.BigInteger
 import java.security.KeyPair
+import java.time.OffsetDateTime
 import java.util.concurrent.TimeUnit
 import kotlin.math.ceil
 
@@ -94,15 +98,23 @@ class ProvenanceClient(channel: ManagedChannel, val logger: Logger, val location
             signer,
             gasEstimate = estimate.copy(feeAdjustment = location.txFeeAdjustment.toDouble())
         )
-        val response = serviceClient.withDeadlineAfter(20, TimeUnit.SECONDS)
+        val txHash = signedTx.toByteArray().sha256().toHexString()
+        val broadcastResponse = serviceClient.withDeadlineAfter(20, TimeUnit.SECONDS)
             .broadcastTx(
                 BroadcastTxRequest.newBuilder()
                     .setTxBytes(ByteString.copyFrom(signedTx.toByteArray()))
-                    .setMode(BroadcastMode.BROADCAST_MODE_BLOCK)
+                    .setMode(BroadcastMode.BROADCAST_MODE_SYNC)
                     .build()
             )
 
-        logger.info("sent tx = ${response.txResponse.txhash}")
+        if (broadcastResponse.txResponse.txhash != txHash) {
+            throw IllegalStateException("TX Hash returned from broadcast different than calculated (actual: ${broadcastResponse.txResponse.txhash}, expected: $txHash)")
+        }
+
+        logger.info("sent tx = $txHash")
+
+        val response = waitForTxCompletion(txHash)
+
         logger.trace("tx response = $response")
 
         if (response.txResponse.code != 0) {
@@ -110,6 +122,30 @@ class ProvenanceClient(channel: ManagedChannel, val logger: Logger, val location
             throw Exception("Received non zero response from Provenance")
         }
 
+    }
+
+    private fun waitForTxCompletion(hash: String, deadline: OffsetDateTime = OffsetDateTime.now().plusSeconds(20)): ServiceOuterClass.GetTxResponse {
+        while (OffsetDateTime.now().isBefore(deadline)) {
+            try {
+                Thread.sleep(1000)
+                logger.info("Polling for tx status (hash: $hash)")
+                serviceClient.getTx(ServiceOuterClass.GetTxRequest.newBuilder()
+                    .setHash(hash)
+                    .build()
+                ).takeIf { it.txResponse.height > 0 || it.txResponse.code > 0 } // is in a block or has an error code
+                    ?.let {
+                        logger.info("tx complete (hash: $hash, height: ${it.txResponse.height}, code: ${it.txResponse.code})")
+                        return it
+                    }
+            } catch (e: StatusRuntimeException) {
+                if (e.status.description?.contains("not found") != false) {
+                    continue
+                }
+                logger.warn("Error querying pending transaction with hash $hash")
+                throw e
+            }
+        }
+        throw Exception("Failed to wait for tx completion (hash: $hash)")
     }
 
     private fun signTx(
