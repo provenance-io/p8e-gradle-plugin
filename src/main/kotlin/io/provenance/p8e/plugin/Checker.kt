@@ -28,7 +28,7 @@ internal class Checker(
         val contractJar = getJar(contractProject, "shadowJar")
         val contractClassLoader = URLClassLoader(arrayOf(contractJar.toURI().toURL()), javaClass.classLoader)
 
-        val scopeDefinitions = findScopes(contractClassLoader).map { clazz ->
+        val scopeDefinitions = findScopes(contractClassLoader, extension.includePackages).map { clazz ->
             project.logger.info("Found ${clazz.name}")
 
             val definitions = clazz.annotations
@@ -59,7 +59,7 @@ internal class Checker(
             }
         }
 
-        findContracts(contractClassLoader).forEach { clazz ->
+        findContracts(contractClassLoader, extension.includePackages).forEach { clazz ->
             project.logger.info("Checking ${clazz.name}")
 
             val spec = ContractSpecMapper.dehydrateSpec(

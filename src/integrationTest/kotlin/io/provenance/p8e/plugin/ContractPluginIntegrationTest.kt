@@ -3,6 +3,8 @@ package io.provenance.p8e.plugin
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.WordSpec
 import io.kotest.core.test.TestCaseOrder
+import io.kotest.matchers.Matcher
+import io.kotest.matchers.MatcherResult
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.collections.shouldBeEmpty
@@ -10,24 +12,35 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.file.shouldHaveFileSize
 import io.kotest.matchers.file.shouldNotHaveFileSize
 import io.kotest.matchers.should
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNot
 import io.kotest.matchers.string.shouldContain
 import org.apache.commons.io.FileUtils
 import org.apache.commons.io.filefilter.WildcardFileFilter
 import org.gradle.testkit.runner.GradleRunner
-import org.gradle.testkit.runner.TaskOutcome
 import org.gradle.testkit.runner.UnexpectedBuildFailure
 import java.io.File
+import org.gradle.testkit.runner.BuildTask
+import org.gradle.testkit.runner.TaskOutcome
 
 class ContractPluginIntegrationTest : WordSpec() {
 
     override fun testCaseOrder() = TestCaseOrder.Sequential
     override fun isolationMode() = IsolationMode.SingleInstance
 
+    fun haveOutcome(outcome: TaskOutcome) = object: Matcher<BuildTask?> {
+        override fun test(value: BuildTask?) = MatcherResult(
+            value != null && value.outcome.equals(outcome),
+            { "build had outcome ${value?.outcome} but expected outcome: $outcome" },
+            { "build should not have outcome: $outcome" },
+        )
+    }
+
     fun run(projectDir: File, task: String) = try {
         GradleRunner.create()
             .withProjectDir(projectDir)
             .withPluginClasspath()
-            .withArguments(task, "--info", "--stacktrace")
+            .withArguments(task, "--info", "--stacktrace", "--no-build-cache")
             .build()
     } catch (e: UnexpectedBuildFailure) {
         e.buildResult
@@ -37,29 +50,27 @@ class ContractPluginIntegrationTest : WordSpec() {
     fun p8eJar(projectDir: File) = run(projectDir, "p8eJar")
     fun p8eBootstrap(projectDir: File) = run(projectDir, "p8eBootstrap")
 
-    val contractUberJar = "example/contracts/build/libs/contracts-1.0-SNAPSHOT-all.jar"
-    val contractJar = "example/contracts/build/libs/contracts-1.0-SNAPSHOT.jar"
-    val contractPath = "example/contracts/src/main/kotlin/io/p8e/contracts/example/"
-    val contractServiceFile = "example/contracts/src/main/resources/META-INF/services/io.p8e.contracts.ContractHash"
+    val contractUberJar = "example-kotlin/contracts/build/libs/contracts-1.0-SNAPSHOT-all.jar"
+    val contractJar = "example-kotlin/contracts/build/libs/contracts-1.0-SNAPSHOT.jar"
+    val contractPath = "example-kotlin/contracts/src/main/kotlin/io/p8e/contracts/examplekotlin/"
+    val contractServiceFile = "example-kotlin/contracts/src/main/resources/META-INF/services/io.provenance.scope.contract.contracts.ContractHash"
 
-    val protoJar = "example/protos/build/libs/protos-1.0-SNAPSHOT.jar"
-    val protoPath = "example/protos/src/main/kotlin/io/p8e/proto/example/"
-    val protoServiceFile = "example/protos/src/main/resources/META-INF/services/io.p8e.proto.ProtoHash"
+    val protoJar = "example-kotlin/protos/build/libs/protos-1.0-SNAPSHOT.jar"
+    val protoPath = "example-kotlin/protos/src/main/kotlin/io/p8e/proto/examplekotlin/"
+    val protoServiceFile = "example-kotlin/protos/src/main/resources/META-INF/services/io.provenance.scope.contract.proto.ProtoHash"
 
     init {
         "A configured DSL buildscript" should {
 
             "Start with a clean base" {
-                val projectDir = File("example")
+                val projectDir = File("example-kotlin")
+
                 val cleanResult = run(projectDir, "clean")
                 val p8eCleanResult = p8eClean(projectDir)
 
-                cleanResult.task("clean") should {
-                    it != null && it.outcome == TaskOutcome.SUCCESS
-                }
-                p8eCleanResult.task("p8eClean") should {
-                    it != null && it.outcome == TaskOutcome.SUCCESS
-                }
+                cleanResult.task(":protos:clean") shouldNot haveOutcome(TaskOutcome.FAILED) // UP-TO-DATE or SUCCESS are valid outcomes
+                cleanResult.task(":contracts:clean") shouldNot haveOutcome(TaskOutcome.FAILED)
+                p8eCleanResult.task(":p8eClean") should haveOutcome(TaskOutcome.SUCCESS)
 
                 FileUtils.listFiles(File(contractPath), WildcardFileFilter("ContractHash*.kt"), WildcardFileFilter("."))
                     .shouldBeEmpty()
@@ -76,12 +87,10 @@ class ContractPluginIntegrationTest : WordSpec() {
             }
 
             "Lead to a successful bootstrap with saved specs" {
-                val projectDir = File("example")
+                val projectDir = File("example-kotlin")
                 val result = p8eBootstrap(projectDir)
 
-                result.task("p8eBootstrap") should {
-                    it != null && it.outcome == TaskOutcome.SUCCESS
-                }
+                result.task(":p8eBootstrap") should haveOutcome(TaskOutcome.SUCCESS)
 
                 FileUtils.listFiles(File(contractPath), WildcardFileFilter("ContractHash*.kt"), WildcardFileFilter("."))
                     .shouldHaveSize(1)
@@ -94,11 +103,11 @@ class ContractPluginIntegrationTest : WordSpec() {
                 File(contractUberJar).exists().shouldBeTrue()
 
                 result.output.shouldContain("Saved jar")
-                result.output.shouldContain("Saving 2 contract specifications")
+                result.output.shouldContain("Saved contract specification io.p8e.contracts.examplekotlin.HelloWorldContract")
             }
 
             "Lead to a successful publish" {
-                val projectDir = File("example")
+                val projectDir = File("example-kotlin")
 
                 File(contractUberJar).exists().shouldBeTrue()
                 val uberJarSize = File(contractUberJar).length()
@@ -110,9 +119,7 @@ class ContractPluginIntegrationTest : WordSpec() {
 
                 val result = p8eJar(projectDir)
 
-                result.task("p8eJar") should {
-                    it != null && it.outcome == TaskOutcome.SUCCESS
-                }
+                result.task(":p8eJar") should haveOutcome(TaskOutcome.SUCCESS)
 
                 File(contractUberJar).shouldHaveFileSize(uberJarSize)
 
@@ -121,7 +128,7 @@ class ContractPluginIntegrationTest : WordSpec() {
             }
 
             "Lead to a successful clean" {
-                val projectDir = File("example")
+                val projectDir = File("example-kotlin")
 
                 FileUtils.listFiles(File(contractPath), WildcardFileFilter("ContractHash*.kt"), WildcardFileFilter("."))
                     .shouldHaveSize(1)
@@ -133,9 +140,7 @@ class ContractPluginIntegrationTest : WordSpec() {
 
                 val result = p8eClean(projectDir)
 
-                result.task("p8eClean") should {
-                    it != null && it.outcome == TaskOutcome.SUCCESS
-                }
+                result.task(":p8eClean") should haveOutcome(TaskOutcome.SUCCESS)
 
                 FileUtils.listFiles(File(contractPath), WildcardFileFilter("ContractHash*.kt"), WildcardFileFilter("."))
                     .shouldBeEmpty()
