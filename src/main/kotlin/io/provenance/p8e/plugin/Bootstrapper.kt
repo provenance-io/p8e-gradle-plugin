@@ -118,9 +118,9 @@ internal class Bootstrapper(
         val contractJar = getJar(contractProject, "shadowJar")
         val protoJar = getJar(protoProject)
         val contractClassLoader = URLClassLoader(arrayOf(contractJar.toURI().toURL()), javaClass.classLoader)
-        val contracts = findContracts(contractClassLoader)
-        val scopes = findScopes(contractClassLoader)
-        val protos = findProtos(contractClassLoader)
+        val contracts = findContracts(contractClassLoader, extension.includePackages)
+        val scopes = findScopes(contractClassLoader, extension.includePackages)
+        val protos = findProtos(contractClassLoader, extension.includePackages)
 
         var errored = false
 

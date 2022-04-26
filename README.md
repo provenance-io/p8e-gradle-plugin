@@ -77,7 +77,10 @@ p8e {
     // Package locations that the ContractHash and ProtoHash source files will be written to.
     contractHashPackage = "io.p8e.contracts.example"
     protoHashPackage = "io.p8e.proto.example"
-
+    
+    // Specifies the root packages to search in when building contractHash and protoHash classes. Defaults to ["io", "com"]
+    includePackages = ["io", "com"]
+    
     // specifies all of the p8e locations that this plugin will bootstrap to.
     locations = [
         local: new io.provenance.p8e.plugin.P8eLocationExtension(

@@ -37,16 +37,18 @@ p8e {
     language = "kt" // defaults to "java"
     contractHashPackage = "io.p8e.contracts.examplekotlin"
     protoHashPackage = "io.p8e.proto.examplekotlin"
+    includePackages = ["io", "com", "tech"]
 
     // specifies all of the p8e locations that this plugin will bootstrap to.
     locations = [
         local: new io.provenance.p8e.plugin.P8eLocationExtension(
-            osUrl: System.getenv('OS_GRPC_URL'),
-            provenanceUrl: System.getenv('PROVENANCE_GRPC_URL'),
-            encryptionPrivateKey: System.getenv('ENCRYPTION_PRIVATE_KEY'),
-            signingPrivateKey: System.getenv('SIGNING_PRIVATE_KEY'),
-            chainId: System.getenv('CHAIN_ID'),
+            osUrl: 'grpc://localhost:5001',
+            provenanceUrl: 'grpc://localhost:9090',
+            encryptionPrivateKey: '0A2100EF4A9391903BFE252CB240DA6695BC5F680A74A8E16BEBA003833DFE9B18C147',
+            signingPrivateKey: '0A2100EF4A9391903BFE252CB240DA6695BC5F680A74A8E16BEBA003833DFE9B18C147',
+            chainId: 'chain-local',
             txBatchSize: "10",
+            txFeeAdjustment: "2.0",
 
             audience: [
                 local1: new io.provenance.p8e.plugin.P8ePartyExtension(
