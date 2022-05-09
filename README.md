@@ -91,7 +91,7 @@ p8e {
             signingPrivateKey: System.getenv('SIGNING_PRIVATE_KEY'),
             txBatchSize: "10",
             osHeaders: [
-                "apiKey" to "some awesome API key"
+                // optional object store grpc headers here
             ],
 
             audience: [
