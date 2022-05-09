@@ -131,12 +131,12 @@ internal class Bootstrapper(
                 cacheJarSizeInBytes = 0L,
                 cacheSpecSizeInBytes = 0L,
                 cacheRecordSizeInBytes = 0L,
-
                 osGrpcUrl = URI(location.osUrl!!),
                 osGrpcDeadlineMs = 60 * 1_000L,
-
                 mainNet = location.mainNet,
+                extraHeaders = location.osHeaders,
             )
+
             val encryptionKeyPair = getKeyPair(location.encryptionPrivateKey!!)
             val signingKeyPair = getKeyPair(location.signingPrivateKey!!)
             val pbSigner = signingKeyPair.toSignerMeta()

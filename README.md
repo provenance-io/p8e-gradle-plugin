@@ -90,6 +90,9 @@ p8e {
             encryptionPrivateKey: System.getenv('ENCRYPTION_PRIVATE_KEY'),
             signingPrivateKey: System.getenv('SIGNING_PRIVATE_KEY'),
             txBatchSize: "10",
+            osHeaders: [
+                // optional object store grpc headers here
+            ],
 
             audience: [
                 local1: new io.provenance.p8e.plugin.P8ePartyExtension(
