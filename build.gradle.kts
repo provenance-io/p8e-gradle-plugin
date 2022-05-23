@@ -20,6 +20,7 @@ repositories {
     mavenCentral()
     maven { url = uri("https://javadoc.jitpack.io") }
     maven { url = uri("https://plugins.gradle.org/m2/") }
+    maven { url = "https://s01.oss.sonatype.org/content/groups/staging/" } // todo: remove once switched to 0.6.0 non-rc
 }
 
 val integrationTest: SourceSet by sourceSets.creating {
