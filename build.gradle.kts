@@ -38,8 +38,8 @@ dependencies {
 
     implementation("org.reflections:reflections:0.9.10")
 
-    implementation("io.provenance.scope:sdk:0.5.1")
-    implementation("io.provenance.scope:util:0.5.1")
+    implementation("io.provenance.scope:sdk:0.6.0-rc2")
+    implementation("io.provenance.scope:util:0.6.0-rc2")
     implementation("io.provenance.protobuf:pb-proto-java:1.5.0")
 
     implementation("io.grpc:grpc-protobuf:1.39.0")
