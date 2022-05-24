@@ -20,7 +20,6 @@ repositories {
     mavenCentral()
     maven { url = uri("https://javadoc.jitpack.io") }
     maven { url = uri("https://plugins.gradle.org/m2/") }
-    maven { url = uri("https://s01.oss.sonatype.org/content/groups/staging/") } // todo: remove once switched to 0.6.0 non-rc
 }
 
 val integrationTest: SourceSet by sourceSets.creating {
@@ -39,8 +38,8 @@ dependencies {
 
     implementation("org.reflections:reflections:0.9.10")
 
-    implementation("io.provenance.scope:sdk:0.6.0-rc2")
-    implementation("io.provenance.scope:util:0.6.0-rc2")
+    implementation("io.provenance.scope:sdk:0.6.0")
+    implementation("io.provenance.scope:util:0.6.0")
     implementation("io.provenance.protobuf:pb-proto-java:1.5.0")
 
     implementation("io.grpc:grpc-protobuf:1.39.0")
