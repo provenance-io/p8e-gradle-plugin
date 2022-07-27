@@ -42,7 +42,7 @@ p8e {
     // specifies all of the p8e locations that this plugin will bootstrap to.
     locations = [
         local: new io.provenance.p8e.plugin.P8eLocationExtension(
-            osUrl: 'grpc://localhost:5001',
+            osUrl: 'grpc://localhost:5000',
             provenanceUrl: 'grpc://localhost:9090',
             encryptionPrivateKey: '0A2100EF4A9391903BFE252CB240DA6695BC5F680A74A8E16BEBA003833DFE9B18C147',
             signingPrivateKey: '0A2100EF4A9391903BFE252CB240DA6695BC5F680A74A8E16BEBA003833DFE9B18C147',
