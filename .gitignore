@@ -17,7 +17,7 @@ local.properties
 
 ContractHash*.kt
 ContractHash*.java
-io.p8e.contracts.ContractHash
+*.ContractHash
 ProtoHash*.kt
 ProtoHash*.java
-io.p8e.proto.ProtoHash
+*.ProtoHash
