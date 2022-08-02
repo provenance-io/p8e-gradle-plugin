@@ -16,6 +16,7 @@ import cosmos.base.v1beta1.CoinOuterClass
 import cosmos.crypto.secp256k1.Keys
 import cosmos.tx.signing.v1beta1.Signing
 import cosmos.tx.v1beta1.ServiceGrpc
+import cosmos.tx.v1beta1.ServiceOuterClass
 import cosmos.tx.v1beta1.ServiceOuterClass.BroadcastMode
 import cosmos.tx.v1beta1.ServiceOuterClass.BroadcastTxRequest
 import cosmos.tx.v1beta1.ServiceOuterClass.SimulateRequest
@@ -27,6 +28,9 @@ import cosmos.tx.v1beta1.TxOuterClass.SignerInfo
 import cosmos.tx.v1beta1.TxOuterClass.Tx
 import cosmos.tx.v1beta1.TxOuterClass.TxBody
 import io.grpc.ManagedChannel
+import io.grpc.Status
+import io.grpc.StatusRuntimeException
+import io.provenance.client.protobuf.extensions.getTx
 import io.provenance.metadata.v1.ContractSpecificationRequest
 import io.provenance.metadata.v1.ContractSpecificationResponse
 import io.provenance.metadata.v1.QueryGrpc
@@ -72,44 +76,88 @@ class ProvenanceClient(channel: ManagedChannel, val logger: Logger, val location
     fun contractSpecification(request: ContractSpecificationRequest): ContractSpecificationResponse =
         metadataClient.withDeadlineAfter(10, TimeUnit.SECONDS).contractSpecification(request)
 
+    private class SequenceMismatch(message: String): Exception(message)
     fun writeTx(address: String, signer: SignerMeta, txBody: TxBody) {
-        val accountInfo = authClient.withDeadlineAfter(10, TimeUnit.SECONDS)
-            .account(
-                QueryOuterClass.QueryAccountRequest.newBuilder()
-                    .setAddress(address)
-                    .build()
-            ).run { account.unpack(Auth.BaseAccount::class.java) }
-        val signedSimulateTx =
-            signTx(txBody, accountInfo.accountNumber, accountInfo.sequence, signer)
-        val estimate = serviceClient.withDeadlineAfter(10, TimeUnit.SECONDS)
-            .simulate(SimulateRequest.newBuilder().setTx(signedSimulateTx).build())
-            .let { GasEstimate(it.gasInfo.gasUsed) }
+        retryForException(SequenceMismatch::class.java, 5) {
+            val accountInfo = authClient.withDeadlineAfter(10, TimeUnit.SECONDS)
+                .account(
+                    QueryOuterClass.QueryAccountRequest.newBuilder()
+                        .setAddress(address)
+                        .build()
+                ).run { account.unpack(Auth.BaseAccount::class.java) }
+            val signedSimulateTx =
+                signTx(txBody, accountInfo.accountNumber, accountInfo.sequence, signer)
+            val estimate = serviceClient.withDeadlineAfter(10, TimeUnit.SECONDS)
+                .simulate(SimulateRequest.newBuilder().setTx(signedSimulateTx).build())
+                .let { GasEstimate(it.gasInfo.gasUsed) }
 
-        logger.trace("signed tx = $signedSimulateTx")
+            logger.trace("signed tx = $signedSimulateTx")
 
-        val signedTx = signTx(
-            txBody,
-            accountInfo.accountNumber,
-            accountInfo.sequence,
-            signer,
-            gasEstimate = estimate.copy(feeAdjustment = location.txFeeAdjustment.toDouble())
-        )
-        val response = serviceClient.withDeadlineAfter(20, TimeUnit.SECONDS)
-            .broadcastTx(
-                BroadcastTxRequest.newBuilder()
-                    .setTxBytes(ByteString.copyFrom(signedTx.toByteArray()))
-                    .setMode(BroadcastMode.BROADCAST_MODE_BLOCK)
-                    .build()
+            val signedTx = signTx(
+                txBody,
+                accountInfo.accountNumber,
+                accountInfo.sequence,
+                signer,
+                gasEstimate = estimate.copy(feeAdjustment = location.txFeeAdjustment.toDouble())
             )
+            val response = serviceClient.withDeadlineAfter(20, TimeUnit.SECONDS)
+                .broadcastTx(
+                    BroadcastTxRequest.newBuilder()
+                        .setTxBytes(ByteString.copyFrom(signedTx.toByteArray()))
+                        .setMode(BroadcastMode.BROADCAST_MODE_SYNC)
+                        .build()
+                )
+            if (response.txResponse.code != 0) {
+                if (response.txResponse.rawLog.contains("account sequence mismatch")) {
+                    throw SequenceMismatch("error broadcasting tx (code ${response.txResponse.code}, rawLog: ${response.txResponse.rawLog})")
+                }
+                throw Exception()
+            }
 
-        logger.info("sent tx = ${response.txResponse.txhash}")
-        logger.trace("tx response = $response")
+            logger.info("sent tx = ${response.txResponse.txhash}")
+            lateinit var tx: ServiceOuterClass.GetTxResponse
+            var numPolls = 0
+            do {
+                tx = try {
+                    if (++numPolls > 25) {
+                        throw Exception("Exceeded maximum number of polls for transaction ${response.txResponse.txhash}")
+                    }
+                    serviceClient.getTx(response.txResponse.txhash)
+                } catch (e: StatusRuntimeException) {
+                    if (e.status.code != Status.NOT_FOUND.code) {
+                        throw e
+                    }
+                    ServiceOuterClass.GetTxResponse.getDefaultInstance()
+                }
+                if (tx.txResponse.code > 0) {
+                    // transaction errored
+                    logger.warn("Could not persist batch: ${tx.txResponse}")
+                    throw Exception("transaction error (code ${tx.txResponse.code}, rawLog: ${tx.txResponse.rawLog})")
+                }
+                Thread.sleep(1000)
+            } while (tx.txResponse.height <= 0)
 
-        if (response.txResponse.code != 0) {
-            logger.warn("Could not persist batch: $response")
-            throw Exception("Received non zero response from Provenance")
+            logger.trace("tx response = ${tx.txResponse}")
         }
+    }
 
+    private fun <E: Throwable, R> retryForException(exceptionClass: Class<E>, numTries: Int, block: () -> R): R {
+        var lastException: Throwable? = null
+        for (n in 1..numTries) {
+            if (lastException != null) {
+                logger.warn("retrying due to exception: ${lastException.message}")
+            }
+            try {
+                return block()
+            } catch (e: Throwable) {
+                if (e.javaClass == exceptionClass) {
+                    lastException = e
+                    continue
+                }
+                throw e
+            }
+        }
+        throw lastException ?: Exception("retry limit reached without a last exception: should not get here")
     }
 
     private fun signTx(
