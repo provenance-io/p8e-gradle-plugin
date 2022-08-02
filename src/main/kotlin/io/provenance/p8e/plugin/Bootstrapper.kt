@@ -258,34 +258,42 @@ internal class Bootstrapper(
                 }
 
                 // write brand new contract specifications
-                contractSpecifications.filter { spec ->
+                contractSpecifications.map { spec ->
                     val existingSpec = client.contractSpecification(
                         ContractSpecificationRequest.newBuilder()
                             .setSpecificationId(spec.uuid().toString())
+                            .setIncludeRecordSpecs(true)
                             .build()
                     )
+                    // at this time we only post contract specifications when it doesn't already exist
+                    // but we can still write record specifications for them
+                    val specDoesNotExist = existingSpec.contractSpecification.specification.className.isEmpty()
 
-                    // at this time we only post scope specifications when it doesn't already exist
-                    existingSpec.contractSpecification.specification.className.isEmpty()
-                }.map { spec ->
                     val recordSpecifications = mutableListOf<RecordSpecification>()
                     val id = MetadataAddress.forContractSpecification(spec.uuid()).bytes
 
-                    val contractSpecification = ContractSpecification.newBuilder()
-                        .setSpecificationId(ByteString.copyFrom(id))
-                        .setDescription(
-                            Description.newBuilder()
-                                .setDescription(spec.definition.resourceLocation.classname)
-                                .setName(spec.definition.name)
-                                .build()
-                        )
-                        .addOwnerAddresses(pbAddress)
-                        .addAllPartiesInvolvedValue(spec.partiesInvolvedValueList)
-                        .setHash(spec.hashString())
-                        .setClassName(spec.definition.resourceLocation.classname)
-                        .build()
+                    val contractSpecification = if (specDoesNotExist) {
+                        ContractSpecification.newBuilder()
+                            .setSpecificationId(ByteString.copyFrom(id))
+                            .setDescription(
+                                Description.newBuilder()
+                                    .setDescription(spec.definition.resourceLocation.classname)
+                                    .setName(spec.definition.name)
+                                    .build()
+                            )
+                            .addOwnerAddresses(pbAddress)
+                            .addAllPartiesInvolvedValue(spec.partiesInvolvedValueList)
+                            .setHash(spec.hashString())
+                            .setClassName(spec.definition.resourceLocation.classname)
+                            .build()
+                    } else null
 
-                    spec.functionSpecsList.forEach { functionSpec ->
+                    val existingRecordSpecs = existingSpec.recordSpecificationsList.map { it.specification.name }.toHashSet()
+
+                    spec.functionSpecsList.filterNot { functionSpec ->
+                        // filter out specifications that already exist
+                        existingRecordSpecs.contains(functionSpec.outputSpec.spec.name)
+                    }.forEach { functionSpec ->
                         val id =
                             MetadataAddress.forRecordSpecification(spec.uuid(), functionSpec.outputSpec.spec.name).bytes
 
@@ -307,19 +315,24 @@ internal class Bootstrapper(
                         recordSpecifications.add(recordSpec)
                     }
 
-                    Pair(contractSpecification, recordSpecifications)
+                    Pair(contractSpecification, recordSpecifications.toList())
                 }.also { specs ->
-                    project.logger.info("Adding ${specs.size} contract specification(s) to batch for provenance")
+                    val (numContractSpecsToAdd, numRecordSpecsToAdd) = specs.fold(0 to 0) { acc, curr ->
+                        acc.first + (curr.first?.let { 1 } ?: 0) to acc.second + curr.second.size
+                    }
+                    project.logger.info("Adding $numContractSpecsToAdd contract specification(s) and $numRecordSpecsToAdd record specification(s) to batch for provenance")
 
                     val messages = mutableListOf<Message>()
 
                     specs.map { (contractSpecification, recordSpecifications) ->
-                        messages.add(
-                            MsgWriteContractSpecificationRequest.newBuilder()
-                                .addSigners(pbAddress)
-                                .setSpecification(contractSpecification)
-                                .build()
-                        )
+                        if (contractSpecification != null) {
+                            messages.add(
+                                MsgWriteContractSpecificationRequest.newBuilder()
+                                    .addSigners(pbAddress)
+                                    .setSpecification(contractSpecification)
+                                    .build()
+                            )
+                        }
 
                         messages.addAll(recordSpecifications.map { spec ->
                             val contractSpecAddress = MetadataAddress.fromBytes(spec.specificationId.toByteArray())
