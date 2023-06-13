@@ -108,10 +108,11 @@ class ProvenanceClient(channel: ManagedChannel, val logger: Logger, val location
                         .build()
                 )
             if (response.txResponse.code != 0) {
+                val message = "error broadcasting tx (code ${response.txResponse.code}, rawLog: ${response.txResponse.rawLog})"
                 if (response.txResponse.rawLog.contains("account sequence mismatch")) {
-                    throw SequenceMismatch("error broadcasting tx (code ${response.txResponse.code}, rawLog: ${response.txResponse.rawLog})")
+                    throw SequenceMismatch(message)
                 }
-                throw Exception()
+                throw Exception(message)
             }
 
             logger.info("sent tx = ${response.txResponse.txhash}")
