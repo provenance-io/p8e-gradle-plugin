@@ -49,14 +49,14 @@ import java.security.KeyPair
 import java.util.concurrent.TimeUnit
 import kotlin.math.ceil
 
-data class GasEstimate(val estimate: Long, val feeAdjustment: Double = DEFAULT_FEE_ADJUSTMENT) {
+    data class GasEstimate(val estimate: Long, val feeAdjustment: Double = DEFAULT_FEE_ADJUSTMENT, val gasPrice: Double? = null) {
     companion object {
         private const val DEFAULT_FEE_ADJUSTMENT = 1.25
         private const val DEFAULT_GAS_PRICE = 1905.00
     }
 
     fun limit() = ceil(estimate * feeAdjustment).toLong()
-    fun fees() = ceil(estimate * feeAdjustment * DEFAULT_GAS_PRICE).toLong()
+    fun fees() = ceil(estimate * feeAdjustment * (gasPrice ?: DEFAULT_GAS_PRICE)).toLong()
 }
 
 fun Collection<Message>.toTxBody(): TxBody = TxBody.newBuilder()
@@ -89,7 +89,7 @@ class ProvenanceClient(channel: ManagedChannel, val logger: Logger, val location
                 signTx(txBody, accountInfo.accountNumber, accountInfo.sequence, signer)
             val estimate = serviceClient.withDeadlineAfter(10, TimeUnit.SECONDS)
                 .simulate(SimulateRequest.newBuilder().setTx(signedSimulateTx).build())
-                .let { GasEstimate(it.gasInfo.gasUsed) }
+                .let { GasEstimate(it.gasInfo.gasUsed, gasPrice = location.txGasPrice?.takeIf{ gasPriceString -> gasPriceString.isNotBlank() }?.toDouble()) }
 
             logger.trace("signed tx = $signedSimulateTx")
 
