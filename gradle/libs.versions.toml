@@ -52,7 +52,9 @@ kotest-runner4 = { module = "io.kotest:kotest-runner-junit5", version.ref = "kot
 
 [bundles]
 kotlinLibs = ["kotlinLibs-std", "kotlinLibs-reflect"]
-provenance = ["provenance-sdk", "provenance-scope", "provenance-client", "provenance-protobuf"]
+provenance = ["provenance-sdk", "provenance-scope",
+#    "provenance-client", # todo: add back on once this is used
+    "provenance-protobuf"]
 grpc = ["grpc-protobuf", "grpc-stub", "grpc-netty-shaded"]
 kethereum = ["kethereum-crypto", "kethereum-crypto-api", "kethereum-crypto-bouncycastle"]
 jackson = ["jackson-core", "jackson-databind", "jackson-datatype-jsr310", "jackson-kotlin", "jackson-annotations"]
