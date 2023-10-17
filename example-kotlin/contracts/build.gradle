@@ -12,7 +12,7 @@ plugins {
 dependencies {
     api project(':protos')
 
-    implementation("io.provenance.scope:contract-base:0.4.0")
+    implementation("io.provenance.scope:contract-base:0.6.1")
 }
 
 publishing {

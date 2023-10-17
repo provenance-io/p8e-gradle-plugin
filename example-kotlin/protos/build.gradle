@@ -1,6 +1,6 @@
 buildscript {
     ext {
-        protobuf_version = '3.6.+'
+        protobuf_version = '3.24.4'
     }
 
     repositories {
@@ -8,12 +8,12 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.13'
+        classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.19' // >= 0.9.x was causing the generateProto task to not be run automatically when building, not sure why, but the 0.8.x line appears to be fine
     }
 }
 
 plugins {
-    id "com.google.protobuf" version "0.8.13"
+    id "com.google.protobuf" version "0.8.19"
     id "maven-publish"
     id "kotlin"
 }
@@ -22,10 +22,10 @@ sourceSets.main.java.srcDirs += 'build/generated/source/proto/main/java'
 sourceSets.main.java.srcDirs += 'src/main/kotlin'
 
 dependencies {
-    implementation("io.provenance.scope:contract-base:0.4.0")
+    implementation("io.provenance.scope:contract-base:0.6.1")
 
-    compile "com.google.protobuf:protobuf-java:$protobuf_version"
-    compile "com.google.protobuf:protobuf-java-util:$protobuf_version"
+    api "com.google.protobuf:protobuf-java:$protobuf_version"
+    api "com.google.protobuf:protobuf-java-util:$protobuf_version"
 }
 
 protobuf {
@@ -38,7 +38,7 @@ protobuf {
         // the identifier, which can be referred to in the "plugins"
         // container of the "generateProtoTasks" closure.
         grpc {
-            artifact = 'io.grpc:protoc-gen-grpc-java:1.0.0-pre2'
+            artifact = 'io.grpc:protoc-gen-grpc-java:1.58.0'
         }
     }
     generateProtoTasks {

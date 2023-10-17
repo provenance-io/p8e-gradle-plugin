@@ -1,0 +1,59 @@
+[versions]
+kotlin = "1.9.10"
+reflections = "0.9.10"
+#provenance-scope-sdk = "0.6.1"
+provenance-scope-sdk = "1.0-SNAPSHOT" # todo: switch to new sdk version once published
+provenance-client = "2.4.0-rc1"
+provenance-protobuf = "1.5.0"
+grpc = "1.58.0"
+commons = "2.14.0"
+protobuf = "3.24.4"
+bouncycastle = "1.70"
+shadow = "8.1.1"
+kethereum = "0.83.4"
+jackson = "2.15.3"
+kotest = "5.7.2"
+kotest-4 = "4.4.+"
+
+[libraries]
+kotlinLibs-std = { module = "org.jetbrains.kotlin:kotlin-stdlib-jdk8", version.ref = "kotlin" }
+kotlinLibs-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
+
+reflections = { module = "org.reflections:reflections", version.ref = "reflections" }
+
+provenance-sdk = { module = "io.provenance.scope:sdk", version.ref = "provenance-scope-sdk" }
+provenance-scope = { module = "io.provenance.scope:util", version.ref = "provenance-scope-sdk" }
+provenance-client = { module = "io.provenance.client:pb-grpc-client-kotlin", version.ref = "provenance-client" }
+provenance-protobuf = { module = "io.provenance.protobuf:pb-proto-java", version.ref = "provenance-protobuf" }
+
+grpc-protobuf = { module = "io.grpc:grpc-protobuf", version.ref = "grpc" }
+grpc-stub = { module = "io.grpc:grpc-stub", version.ref = "grpc" }
+grpc-netty-shaded = { module = "io.grpc:grpc-netty-shaded", version.ref = "grpc" }
+
+commons = { module = "commons-io:commons-io", version.ref = "commons" }
+protobuf = { module = "com.google.protobuf:protobuf-java", version.ref = "protobuf" }
+bouncycastle = { module = "org.bouncycastle:bcprov-jdk15on", version.ref = "bouncycastle" }
+
+shadow = { module = "com.github.johnrengelman:shadow", version.ref = "shadow" }
+
+kethereum-crypto = { module = "com.github.komputing.kethereum:crypto", version.ref = "kethereum" }
+kethereum-crypto-api = { module = "com.github.komputing.kethereum:crypto_api", version.ref = "kethereum" }
+kethereum-crypto-bouncycastle = { module = "com.github.komputing.kethereum:crypto_impl_bouncycastle", version.ref = "kethereum" }
+jackson-core = { module = "com.fasterxml.jackson.core:jackson-core", version.ref = "jackson" }
+jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
+jackson-datatype-jsr310 = { module = "com.fasterxml.jackson.datatype:jackson-datatype-jsr310", version.ref = "jackson" }
+jackson-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version.ref = "jackson" }
+jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations", version.ref = "jackson" }
+
+kotest-runner = { module = "io.kotest:kotest-runner-junit5", version.ref = "kotest" }
+kotest-assertions = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
+kotest-property = { module = "io.kotest:kotest-property", version.ref = "kotest" }
+kotest-runner4 = { module = "io.kotest:kotest-runner-junit5", version.ref = "kotest-4" }
+
+[bundles]
+kotlinLibs = ["kotlinLibs-std", "kotlinLibs-reflect"]
+provenance = ["provenance-sdk", "provenance-scope", "provenance-client", "provenance-protobuf"]
+grpc = ["grpc-protobuf", "grpc-stub", "grpc-netty-shaded"]
+kethereum = ["kethereum-crypto", "kethereum-crypto-api", "kethereum-crypto-bouncycastle"]
+jackson = ["jackson-core", "jackson-databind", "jackson-datatype-jsr310", "jackson-kotlin", "jackson-annotations"]
+kotest = ["kotest-runner", "kotest-assertions", "kotest-property"]

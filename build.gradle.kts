@@ -8,11 +8,9 @@ version = (project.property("version") as String?)
     ?: "1.0-SNAPSHOT"
 
 plugins {
-    id("com.gradle.plugin-publish") version "0.13.0"
-    `jacoco`
-    `java-gradle-plugin`
-    kotlin("jvm") version "1.5.21"
-    `maven-publish`
+    id("com.gradle.plugin-publish") version "1.2.1"
+    jacoco
+    kotlin("jvm") version "1.9.10"
 }
 
 repositories {
@@ -23,55 +21,54 @@ repositories {
 }
 
 val integrationTest: SourceSet by sourceSets.creating {
-    compileClasspath += sourceSets["main"].output + configurations.testRuntimeClasspath
+    compileClasspath += files(sourceSets["main"].output, configurations.testRuntimeClasspath)
     runtimeClasspath += output + compileClasspath
 }
 
 configurations {
-    "integrationTestImplementation" { extendsFrom(configurations["testImplementation"]) }
-    "integrationTestRuntimeOnly" { extendsFrom(configurations["testRuntimeOnly"]) }
+    configurations["integrationTestImplementation"].also { intTestImplementation ->
+        intTestImplementation.extendsFrom(configurations["testImplementation"])
+    }
+    configurations["integrationTestRuntimeOnly"].also { intTestRuntimeOnly ->
+        intTestRuntimeOnly.extendsFrom(configurations["testRuntimeOnly"])
+    }
 }
 
 dependencies {
-    implementation(kotlin("stdlib", "1.5.21"))
-    implementation(kotlin("reflect", "1.5.21"))
+    listOf(
+        libs.bundles.kotlinLibs,
+        libs.bundles.provenance,
+        libs.bundles.grpc,
 
-    implementation("org.reflections:reflections:0.9.10")
+        libs.reflections,
+        libs.commons,
+        libs.protobuf,
+        libs.bouncycastle,
 
-    implementation("io.provenance.scope:sdk:0.6.1")
-    implementation("io.provenance.scope:util:0.6.1")
-    implementation("io.provenance.protobuf:pb-proto-java:1.5.0")
+        // third party plugins that this plugin will apply
+        libs.shadow,
 
-    implementation("io.grpc:grpc-protobuf:1.39.0")
-    implementation("io.grpc", "grpc-stub", "1.39.0")
+        // added for copied StdSignature functionality
+        libs.bundles.kethereum,
+        libs.bundles.jackson,
+    ).forEach(::implementation)
 
-    implementation("commons-io:commons-io:2.8.0")
-    implementation("com.google.protobuf:protobuf-java:3.12.0")
-    implementation("org.bouncycastle:bcprov-jdk15on:1.69")
+    listOf(
+        libs.bundles.kotest
+    ).forEach(::testImplementation)
 
-    runtimeOnly("io.grpc", "grpc-netty-shaded", "1.39.0")
-
-    // third party plugins that this plugin will apply
-    implementation("com.github.jengelman.gradle.plugins:shadow:6.1.0")
-
-    // added for copied StdSignature functionality
-    implementation("com.github.komputing.kethereum:crypto:0.83.4")
-    implementation("com.github.komputing.kethereum:crypto_api:0.83.4")
-    implementation("com.github.komputing.kethereum:crypto_impl_bouncycastle:0.83.4")
-    implementation("com.fasterxml.jackson.core:jackson-core:2.12.2")
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.12.2")
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.12.2")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.12.2")
-    implementation("com.fasterxml.jackson.core:jackson-annotations:2.12.2")
-
-    testImplementation("io.kotest:kotest-runner-junit5:5.2.+")
-    testImplementation("io.kotest:kotest-assertions-core:5.2.+")
-    testImplementation("io.kotest:kotest-property:5.2.+")
-    "integrationTestImplementation"("io.kotest:kotest-runner-junit5:4.4.+")
+    configurations["integrationTestImplementation"](libs.kotest.runner4)
 }
 
+kotlin {
+    jvmToolchain(17)
+}
+
+
 tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "1.8"
+    kotlinOptions {
+        jvmTarget = "17"
+    }
 }
 
 tasks.withType<Test> {
@@ -105,24 +102,20 @@ tasks.register<Test>("integrationTest") {
 }
 
 jacoco {
-    toolVersion = "0.8.7"
+    toolVersion = "0.8.11"
 }
 
 tasks.jacocoTestReport {
     reports {
-        xml.isEnabled = true
-        csv.isEnabled = false
+        xml.required.set(true)
+        csv.required.set(true)
     }
-}
-
-pluginBundle {
-    website = "https://github.com/provenance-io/p8e-gradle-plugin"
-    vcsUrl = "https://github.com/provenance-io/p8e-gradle-plugin.git"
-    tags = listOf("provenance", "provenance.io", "p8e", "bootstrap", "publish")
 }
 
 gradlePlugin {
     testSourceSets(integrationTest)
+    website = "https://github.com/provenance-io/p8e-gradle-plugin"
+    vcsUrl = "https://github.com/provenance-io/p8e-gradle-plugin.git"
 
     plugins {
         create("p8ePlugin") {
@@ -130,6 +123,7 @@ gradlePlugin {
             displayName = "p8e gradle plugin"
             description = "Publishes P8eContract classes to Provenance P8e execution environments"
             implementationClass = "io.provenance.p8e.plugin.ContractPlugin"
+            tags = listOf("provenance", "provenance.io", "p8e", "bootstrap", "publish")
         }
     }
 }

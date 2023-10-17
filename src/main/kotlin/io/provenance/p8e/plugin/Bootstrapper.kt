@@ -74,7 +74,7 @@ fun getAddress(publicKey: PublicKey, mainNet: Boolean): String {
 
 internal class Bootstrapper(
     private val project: Project,
-    val extension: P8eExtension
+    private val extension: P8eExtension
 ) {
 
     init {
@@ -294,11 +294,11 @@ internal class Bootstrapper(
                         // filter out specifications that already exist
                         existingRecordSpecs.contains(functionSpec.outputSpec.spec.name)
                     }.forEach { functionSpec ->
-                        val id =
+                        val recordSpecId =
                             MetadataAddress.forRecordSpecification(spec.uuid(), functionSpec.outputSpec.spec.name).bytes
 
                         val recordSpec = RecordSpecification.newBuilder()
-                            .setSpecificationId(ByteString.copyFrom(id))
+                            .setSpecificationId(ByteString.copyFrom(recordSpecId))
                             .setName(functionSpec.outputSpec.spec.name)
                             .addAllInputs(functionSpec.inputSpecsList.map { inputSpec ->
                                 InputSpecification.newBuilder()
