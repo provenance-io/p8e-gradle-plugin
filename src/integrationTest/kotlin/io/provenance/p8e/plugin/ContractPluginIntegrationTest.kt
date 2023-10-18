@@ -28,7 +28,7 @@ class ContractPluginIntegrationTest : WordSpec() {
     override fun testCaseOrder() = TestCaseOrder.Sequential
     override fun isolationMode() = IsolationMode.SingleInstance
 
-    fun haveOutcome(outcome: TaskOutcome) = object: Matcher<BuildTask?> {
+    private fun haveOutcome(outcome: TaskOutcome) = object: Matcher<BuildTask?> {
         override fun test(value: BuildTask?) = MatcherResult(
             value != null && value.outcome.equals(outcome),
             { "build had outcome ${value?.outcome} but expected outcome: $outcome" },
@@ -36,7 +36,7 @@ class ContractPluginIntegrationTest : WordSpec() {
         )
     }
 
-    fun run(projectDir: File, task: String) = try {
+    private fun run(projectDir: File, task: String) = try {
         GradleRunner.create()
             .withProjectDir(projectDir)
             .withPluginClasspath()
@@ -72,9 +72,9 @@ class ContractPluginIntegrationTest : WordSpec() {
                 cleanResult.task(":contracts:clean") shouldNot haveOutcome(TaskOutcome.FAILED)
                 p8eCleanResult.task(":p8eClean") should haveOutcome(TaskOutcome.SUCCESS)
 
-                FileUtils.listFiles(File(contractPath), WildcardFileFilter("ContractHash*.kt"), WildcardFileFilter("."))
+                FileUtils.listFiles(File(contractPath), WildcardFileFilter.builder().setWildcards("ContractHash*.kt").get(), WildcardFileFilter.builder().setWildcards(".").get())
                     .shouldBeEmpty()
-                FileUtils.listFiles(File(protoPath), WildcardFileFilter("ProtoHash*.kt"), WildcardFileFilter("."))
+                FileUtils.listFiles(File(protoPath), WildcardFileFilter.builder().setWildcards("ProtoHash*.kt").get(), WildcardFileFilter.builder().setWildcards(".").get())
                     .shouldBeEmpty()
 
                 File(contractServiceFile).exists().shouldBeFalse()
@@ -92,9 +92,9 @@ class ContractPluginIntegrationTest : WordSpec() {
 
                 result.task(":p8eBootstrap") should haveOutcome(TaskOutcome.SUCCESS)
 
-                FileUtils.listFiles(File(contractPath), WildcardFileFilter("ContractHash*.kt"), WildcardFileFilter("."))
+                FileUtils.listFiles(File(contractPath), WildcardFileFilter.builder().setWildcards("ContractHash*.kt").get(), WildcardFileFilter.builder().setWildcards(".").get())
                     .shouldHaveSize(1)
-                FileUtils.listFiles(File(protoPath), WildcardFileFilter("ProtoHash*.kt"), WildcardFileFilter("."))
+                FileUtils.listFiles(File(protoPath), WildcardFileFilter.builder().setWildcards("ProtoHash*.kt").get(), WildcardFileFilter.builder().setWildcards(".").get())
                     .shouldHaveSize(1)
 
                 File(contractServiceFile).exists().shouldBeTrue()
@@ -130,9 +130,9 @@ class ContractPluginIntegrationTest : WordSpec() {
             "Lead to a successful clean" {
                 val projectDir = File("example-kotlin")
 
-                FileUtils.listFiles(File(contractPath), WildcardFileFilter("ContractHash*.kt"), WildcardFileFilter("."))
+                FileUtils.listFiles(File(contractPath), WildcardFileFilter.builder().setWildcards("ContractHash*.kt").get(), WildcardFileFilter.builder().setWildcards(".").get())
                     .shouldHaveSize(1)
-                FileUtils.listFiles(File(protoPath), WildcardFileFilter("ProtoHash*.kt"), WildcardFileFilter("."))
+                FileUtils.listFiles(File(protoPath), WildcardFileFilter.builder().setWildcards("ProtoHash*.kt").get(), WildcardFileFilter.builder().setWildcards(".").get())
                     .shouldHaveSize(1)
 
                 File(contractServiceFile).exists().shouldBeTrue()
@@ -142,9 +142,9 @@ class ContractPluginIntegrationTest : WordSpec() {
 
                 result.task(":p8eClean") should haveOutcome(TaskOutcome.SUCCESS)
 
-                FileUtils.listFiles(File(contractPath), WildcardFileFilter("ContractHash*.kt"), WildcardFileFilter("."))
+                FileUtils.listFiles(File(contractPath), WildcardFileFilter.builder().setWildcards("ContractHash*.kt").get(), WildcardFileFilter.builder().setWildcards(".").get())
                     .shouldBeEmpty()
-                FileUtils.listFiles(File(protoPath), WildcardFileFilter("ProtoHash*.kt"), WildcardFileFilter("."))
+                FileUtils.listFiles(File(protoPath), WildcardFileFilter.builder().setWildcards("ProtoHash*.kt").get(), WildcardFileFilter.builder().setWildcards(".").get())
                     .shouldBeEmpty()
 
                 File(contractServiceFile).exists().shouldBeFalse()

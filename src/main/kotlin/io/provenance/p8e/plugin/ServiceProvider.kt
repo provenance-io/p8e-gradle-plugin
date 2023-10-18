@@ -254,7 +254,7 @@ public class ProtoHash$uid implements ProtoHash {
         File(projectPaths.sourcePath).mkdirs()
         File(projectPaths.serviceProviderImplPath).mkdirs()
 
-        FileUtils.listFiles(File(projectPaths.sourcePath), WildcardFileFilter("ContractHash*.${projectPaths.language.extension()}"), WildcardFileFilter("."))
+        FileUtils.listFiles(File(projectPaths.sourcePath), WildcardFileFilter.builder().setWildcards("ContractHash*.${projectPaths.language.extension()}").get(), WildcardFileFilter.builder().setWildcards(".").get())
             .forEach { it.delete() }
 
         listOf(projectPaths.serviceProviderImplPath, "$interfaceContractPackage.ContractHash")
@@ -269,7 +269,7 @@ public class ProtoHash$uid implements ProtoHash {
         File(projectPaths.sourcePath).mkdirs()
         File(projectPaths.serviceProviderImplPath).mkdirs()
 
-        FileUtils.listFiles(File(projectPaths.sourcePath), WildcardFileFilter("ProtoHash*.${projectPaths.language.extension()}"), WildcardFileFilter("."))
+        FileUtils.listFiles(File(projectPaths.sourcePath), WildcardFileFilter.builder().setWildcards("ProtoHash*.${projectPaths.language.extension()}").get(), WildcardFileFilter.builder().setWildcards(".").get())
             .forEach { it.delete() }
 
         listOf(projectPaths.serviceProviderImplPath, "$interfaceProtoPackage.ProtoHash")
