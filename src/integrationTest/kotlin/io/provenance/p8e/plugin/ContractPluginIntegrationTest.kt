@@ -90,9 +90,7 @@ class ContractPluginIntegrationTest : WordSpec() {
                 val projectDir = File("example-kotlin")
                 val result = p8eBootstrap(projectDir)
 
-                result.also {
-                    println("hi $it")
-                }.task(":p8eBootstrap") should haveOutcome(TaskOutcome.SUCCESS)
+                result.task(":p8eBootstrap") should haveOutcome(TaskOutcome.SUCCESS)
 
                 FileUtils.listFiles(File(contractPath), WildcardFileFilter.builder().setWildcards("ContractHash*.kt").get(), WildcardFileFilter.builder().setWildcards(".").get())
                     .shouldHaveSize(1)
