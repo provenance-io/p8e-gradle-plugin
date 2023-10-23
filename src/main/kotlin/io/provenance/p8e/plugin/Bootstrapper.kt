@@ -3,6 +3,7 @@ package io.provenance.p8e.plugin
 import com.google.protobuf.ByteString
 import com.google.protobuf.Message
 import io.grpc.ManagedChannelBuilder
+import io.provenance.client.grpc.BaseReqSigner
 import io.provenance.metadata.v1.ContractSpecification
 import io.provenance.metadata.v1.ContractSpecificationRequest
 import io.provenance.metadata.v1.DefinitionType
@@ -15,7 +16,6 @@ import io.provenance.metadata.v1.MsgWriteScopeSpecificationRequest
 import io.provenance.metadata.v1.RecordSpecification
 import io.provenance.metadata.v1.ScopeSpecification
 import io.provenance.metadata.v1.ScopeSpecificationRequest
-import io.provenance.scope.contract.annotations.ScopeSpecification as ScopeSpecificationReference
 import io.provenance.scope.contract.annotations.ScopeSpecificationDefinition
 import io.provenance.scope.contract.proto.Commons.ProvenanceReference
 import io.provenance.scope.contract.proto.Specifications.ContractSpec
@@ -55,6 +55,7 @@ import java.security.PublicKey
 import java.security.Security
 import java.util.UUID
 import java.util.concurrent.TimeUnit
+import io.provenance.scope.contract.annotations.ScopeSpecification as ScopeSpecificationReference
 
 fun ContractSpec.uuid(): UUID = toByteArray().sha256LoBytes().toUuid()
 fun ContractSpec.hashString(): String = toByteArray().sha256LoBytes().base64EncodeString()
@@ -139,7 +140,7 @@ internal class Bootstrapper(
 
             val encryptionKeyPair = getKeyPair(location.encryptionPrivateKey!!)
             val signingKeyPair = getKeyPair(location.signingPrivateKey!!)
-            val pbSigner = signingKeyPair.toSignerMeta()
+            val pbSigner = BaseReqSigner(JavaKeyPairSigner(signingKeyPair, config.mainNet))
             val pbAddress = getAddress(signingKeyPair.public, config.mainNet)
             val affiliate = Affiliate(
                 signingKeyRef = DirectKeyRef(signingKeyPair.public, signingKeyPair.private),
@@ -221,7 +222,7 @@ internal class Bootstrapper(
                                 .build()
                         }.chunked(location.txBatchSize.toInt()).forEach { batch ->
                             try {
-                                client.writeTx(pbAddress, pbSigner, batch.toTxBody())
+                                client.writeTx(pbSigner, batch.toTxBody())
                             } catch (e: Exception) {
                                 project.logger.info("sent messages = $batch")
                                 throw e
@@ -347,7 +348,7 @@ internal class Bootstrapper(
 
                     messages.chunked(location.txBatchSize.toInt()).forEach { batch ->
                         try {
-                            client.writeTx(pbAddress, pbSigner, batch.toTxBody())
+                            client.writeTx(pbSigner, batch.toTxBody())
                         } catch (e: Exception) {
                             project.logger.info("sent messages = $batch")
                             throw e
@@ -384,7 +385,7 @@ internal class Bootstrapper(
 
                     contractSpecToScopeSpecMessages.chunked(location.txBatchSize.toInt()).forEach { batch ->
                         try {
-                            client.writeTx(pbAddress, pbSigner, batch.toTxBody())
+                            client.writeTx(pbSigner, batch.toTxBody())
                         } catch (e: Exception) {
                             project.logger.info("sent messages = $batch")
                             throw e

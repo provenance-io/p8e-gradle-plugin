@@ -1,15 +1,16 @@
 [versions]
 kotlin = "1.9.10"
 reflections = "0.9.10"
-provenance-scope-sdk = "0.7.0-rc1"
+provenance-scope-sdk = "0.7.0-rc2"
 provenance-client = "2.4.0-rc1"
 provenance-protobuf = "1.5.0"
+figure-hdwallet = "0.4.3"
 grpc = "1.58.0"
 commons = "2.14.0"
 protobuf = "3.24.4"
 bouncycastle = "1.70"
 shadow = "8.1.1"
-kethereum = "0.83.4"
+kethereum = "0.86.0"
 jackson = "2.15.3"
 kotest = "5.7.2"
 kotest-4 = "4.4.+"
@@ -25,13 +26,16 @@ provenance-scope = { module = "io.provenance.scope:util", version.ref = "provena
 provenance-client = { module = "io.provenance.client:pb-grpc-client-kotlin", version.ref = "provenance-client" }
 provenance-protobuf = { module = "io.provenance.protobuf:pb-proto-java", version.ref = "provenance-protobuf" }
 
+figure-hdwallet = { module = "tech.figure.hdwallet:hdwallet", version.ref = "figure-hdwallet" }
+
 grpc-protobuf = { module = "io.grpc:grpc-protobuf", version.ref = "grpc" }
 grpc-stub = { module = "io.grpc:grpc-stub", version.ref = "grpc" }
 grpc-netty-shaded = { module = "io.grpc:grpc-netty-shaded", version.ref = "grpc" }
 
 commons = { module = "commons-io:commons-io", version.ref = "commons" }
 protobuf = { module = "com.google.protobuf:protobuf-java", version.ref = "protobuf" }
-bouncycastle = { module = "org.bouncycastle:bcprov-jdk15on", version.ref = "bouncycastle" }
+bouncycastle-bcprov = { module = "org.bouncycastle:bcprov-jdk15on", version.ref = "bouncycastle" }
+bouncycastle-bcpkix = { module = "org.bouncycastle:bcpkix-jdk15on", version.ref = "bouncycastle" }
 
 shadow = { module = "com.github.johnrengelman:shadow", version.ref = "shadow" }
 
@@ -51,10 +55,9 @@ kotest-runner4 = { module = "io.kotest:kotest-runner-junit5", version.ref = "kot
 
 [bundles]
 kotlinLibs = ["kotlinLibs-std", "kotlinLibs-reflect"]
-provenance = ["provenance-sdk", "provenance-scope",
-#    "provenance-client", # todo: add back on once this is used
-    "provenance-protobuf"]
+provenance = ["provenance-sdk", "provenance-scope", "provenance-client", "provenance-protobuf"]
 grpc = ["grpc-protobuf", "grpc-stub", "grpc-netty-shaded"]
 kethereum = ["kethereum-crypto", "kethereum-crypto-api", "kethereum-crypto-bouncycastle"]
 jackson = ["jackson-core", "jackson-databind", "jackson-datatype-jsr310", "jackson-kotlin", "jackson-annotations"]
 kotest = ["kotest-runner", "kotest-assertions", "kotest-property"]
+bouncycastle = ["bouncycastle-bcprov", "bouncycastle-bcpkix"]
