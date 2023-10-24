@@ -42,11 +42,13 @@ dependencies {
         libs.bundles.kotlinLibs,
         libs.bundles.provenance,
         libs.bundles.grpc,
+        libs.bundles.bouncycastle,
+
+        libs.figure.hdwallet,
 
         libs.reflections,
         libs.commons,
         libs.protobuf,
-        libs.bouncycastle,
 
         // third party plugins that this plugin will apply
         libs.shadow,
