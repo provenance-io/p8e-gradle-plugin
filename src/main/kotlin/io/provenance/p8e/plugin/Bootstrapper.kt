@@ -4,6 +4,8 @@ import com.google.protobuf.ByteString
 import com.google.protobuf.Message
 import io.grpc.ManagedChannelBuilder
 import io.provenance.client.grpc.BaseReqSigner
+import io.provenance.client.grpc.ChannelOpts
+import io.provenance.client.grpc.createChannel
 import io.provenance.metadata.v1.ContractSpecification
 import io.provenance.metadata.v1.ContractSpecificationRequest
 import io.provenance.metadata.v1.DefinitionType
@@ -149,10 +151,7 @@ internal class Bootstrapper(
             )
             val sdk = Client(SharedClient(config), affiliate)
             val provenanceUri = URI(location.provenanceUrl!!)
-            val channel = ManagedChannelBuilder
-                .forAddress(provenanceUri.host, provenanceUri.port)
-                .usePlaintext()
-                .build()
+            val channel = createChannel(provenanceUri, ChannelOpts()) { }
             val client = ProvenanceClient(channel, project.logger, location)
 
             try {

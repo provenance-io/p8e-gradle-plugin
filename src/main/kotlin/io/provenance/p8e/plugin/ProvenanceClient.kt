@@ -65,7 +65,8 @@ class ProvenanceClient(channel: ManagedChannel, val logger: Logger, val location
                 location.txGasPrice?.takeIf{ gasPriceString -> gasPriceString.isNotBlank() }?.toDouble()?.toCoin("nhash")?.also { logger.info("Using provided gas price of ${it.amount}${it.denom}") } ?:
                 CoinOuterClass.Coin.newBuilder().setAmount("19050").setDenom("nhash").build().also { logger.info("Using default gas price of ${it.amount}${it.denom}") }
             )
-        )
+        ),
+        channel = channel
     )
 
     fun scopeSpecification(request: ScopeSpecificationRequest): ScopeSpecificationResponse =
