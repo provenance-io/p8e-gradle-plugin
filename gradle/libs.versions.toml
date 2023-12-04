@@ -1,7 +1,7 @@
 [versions]
 kotlin = "1.9.10"
 reflections = "0.9.10"
-provenance-scope-sdk = "0.7.0-rc2"
+provenance-scope-sdk = "0.7.0"
 provenance-client = "2.4.0"
 provenance-protobuf = "1.5.0"
 figure-hdwallet = "0.4.3"

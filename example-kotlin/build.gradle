@@ -1,7 +1,6 @@
 buildscript {
     repositories {
         mavenLocal()
-        maven { url "https://s01.oss.sonatype.org/content/groups/staging/" }
         mavenCentral()
         maven { url 'https://javadoc.jitpack.io' }
     }
@@ -22,7 +21,6 @@ allprojects {
     repositories {
         mavenLocal()
         mavenCentral()
-        maven { url "https://s01.oss.sonatype.org/content/groups/staging/" }
         maven { url 'https://javadoc.jitpack.io' }
     }
 }

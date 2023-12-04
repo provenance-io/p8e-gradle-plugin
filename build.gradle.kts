@@ -15,9 +15,6 @@ plugins {
 
 repositories {
     mavenLocal()
-    maven {
-        url = uri("https://s01.oss.sonatype.org/content/groups/staging/")
-    }
     mavenCentral()
     maven { url = uri("https://javadoc.jitpack.io") }
     maven { url = uri("https://plugins.gradle.org/m2/") }
