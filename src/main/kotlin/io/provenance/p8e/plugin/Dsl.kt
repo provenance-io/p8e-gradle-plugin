@@ -11,6 +11,7 @@ open class P8eLocationExtension {
     var signingPrivateKey: String? = ""
     var osUrl: String? = ""
     var provenanceUrl: String? = ""
+    var provenanceQueryTimeoutSeconds: String = "10"
     var audience: Map<String, P8ePartyExtension> = emptyMap()
     var chainId: String? = ""
     var mainNet: Boolean = chainId == "pio-mainnet-1"
